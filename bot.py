@@ -65,7 +65,7 @@ async def is_subscribed(bot, user_id):
         return True
 
     try:
-        channel_id = int(CHANNELS[0])
+        channel_id = CHANNELS[0]
 
         member = await bot.get_chat_member(
             chat_id=channel_id,
