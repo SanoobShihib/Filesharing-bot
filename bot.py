@@ -535,9 +535,9 @@ async def button_callback(
 
     await query.answer()
 
-    # -----------------------------------------------------
+    # =====================================================
     # HELP
-    # -----------------------------------------------------
+    # =====================================================
 
     if query.data == "help":
 
@@ -548,53 +548,63 @@ async def button_callback(
             "🔗 You will receive one share link."
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # ABOUT
-    # -----------------------------------------------------
+    # =====================================================
 
     elif query.data == "about":
 
         about_text = (
-        "╭━━━━━━━━━━━━━━━━━━╮\n"
-        "      ✦ *CL FILE BOT* ✦\n"
-        "╰━━━━━━━━━━━━━━━━━━╯\n\n"
-        "➜ 👤 *Owner:* [Heisenberg 😈](https://t.me/heisenbergalready)\n"
-        "➜ 🛠️ *Maintained By:* `CL Team`\n"
-        "➜ 🐍 *Language:* `Python 3`\n"
-        "➜ 📚 *Library:* `python-telegram-bot`\n"
-        "➜ 🗄️ *Database:* `MongoDB`\n"
-        "➜ ☁️ *Server:* `Koyeb`\n"
-        "➜ 🔖 *Version:* `v1.0.0`\n"
-        "➜ 🟢 *Status:* `Online`\n\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        "➜ 📂 *Multiple File Sharing*\n"
-        "➜ 🔗 *One Link For Multiple Files*\n"
-        "➜ 🔒 *Force Subscribe*\n"
-        "➜ ⏱️ *Auto File Delete*\n"
-        "➜ 👨‍💻 *Admin File Management*\n\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        "⚡ *Fast • Simple • Secure*\n\n"
-        "        © *CL File Bot*"
-    )
+            "╭━━━━━━━━━━━━━━━━━━╮\n"
+            "      ✦ *CL FILE BOT* ✦\n"
+            "╰━━━━━━━━━━━━━━━━━━╯\n\n"
+            "➜ 👤 *Owner:* [Heisenberg 😈]"
+            "(https://t.me/heisenbergalready)\n"
+            "➜ 🛠️ *Maintained By:* `CL Team`\n"
+            "➜ 🐍 *Language:* `Python 3`\n"
+            "➜ 📚 *Library:* `python-telegram-bot`\n"
+            "➜ 🗄️ *Database:* `MongoDB`\n"
+            "➜ ☁️ *Server:* `Koyeb`\n"
+            "➜ 🔖 *Version:* `v1.1.0`\n"
+            "➜ 🟢 *Status:* `Online`\n\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "➜ 📂 *Multiple File Sharing*\n"
+            "➜ 🔗 *One Link For Multiple Files*\n"
+            "➜ 🔍 *File List / Auto Filter*\n"
+            "➜ 📦 *Send All Files*\n"
+            "➜ 🔒 *Force Subscribe*\n"
+            "➜ ⏱️ *Auto File Delete*\n\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "⚡ *Fast • Simple • Secure*\n\n"
+            "        © *CL File Bot*"
+        )
 
         await query.edit_message_text(
             about_text,
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "❌ Close",
-                    callback_data="close"
-                )
-            ]
-        ])
-    )
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "❌ Close",
+                            callback_data="close",
+                        )
+                    ]
+                ]
+            ),
+        )
+
+    # =====================================================
+    # CLOSE
+    # =====================================================
 
     elif query.data == "close":
+
         await query.message.delete()
-    # -----------------------------------------------------
-    # TRY AGAIN - FORCE SUBSCRIBE
-    # -----------------------------------------------------
+
+    # =====================================================
+    # FORCE SUBSCRIBE CHECK
+    # =====================================================
 
     elif query.data.startswith(
         "check_subscription:"
@@ -602,7 +612,7 @@ async def button_callback(
 
         share_token = query.data.split(
             ":",
-            1
+            1,
         )[1]
 
         user = query.from_user
@@ -615,85 +625,198 @@ async def button_callback(
         if not subscribed:
 
             await query.answer(
-                "❌ നിങ്ങൾ ഇപ്പോഴും Channel Join ചെയ്തിട്ടില്ല.",
+                "❌ ആദ്യം Channel Join ചെയ്യുക.",
                 show_alert=True,
             )
 
             return
 
-        # User joined successfully
         await query.answer(
             "✅ Subscription verified!"
         )
 
-        try:
-
-            await query.edit_message_text(
-                "✅ Channel subscription verified!\n"
-                "📥 Your files are being sent..."
-            )
-
-        except Exception:
-
-            logger.exception(
-                "Failed to edit subscription message"
-            )
-
-        files = get_files(share_token)
+        files = get_files(
+            share_token
+        )
 
         if not files:
 
-            try:
-
-                await query.message.reply_text(
-                    "❌ Files not found or link is invalid."
-                )
-
-            except Exception:
-
-                logger.exception(
-                    "Failed to send invalid-link message"
-                )
+            await query.edit_message_text(
+                "❌ Files not found or link is invalid."
+            )
 
             return
 
-        sent_message_ids = []
+        text = create_file_list_text(
+            total_files=len(files),
+            page=0,
+        )
 
-        for file_data in files:
+        keyboard = create_file_keyboard(
+            share_token=share_token,
+            files=files,
+            page=0,
+        )
 
-            try:
+        await query.edit_message_text(
+            text,
+            parse_mode="Markdown",
+            reply_markup=keyboard,
+        )
 
-                sent_message = (
-                    await query.message.reply_document(
-                        document=file_data["file_id"],
-                        caption=(
-                            f"📁 "
-                            f"{file_data['file_name'] or 'Shared File'}"
-                        ),
-                    )
-                )
+    # =====================================================
+    # NEXT / PREVIOUS PAGE
+    # =====================================================
 
-                sent_message_ids.append(
-                    sent_message.message_id
-                )
+    elif query.data.startswith(
+        "page:"
+    ):
 
-            except Exception:
+        parts = query.data.split(
+            ":"
+        )
 
-                logger.exception(
-                    "Failed to send shared file"
-                )
+        if len(parts) != 3:
+            return
 
-        if sent_message_ids:
+        share_token = parts[1]
+        page = int(parts[2])
 
-            asyncio.create_task(
-                delete_file_messages(
-                    bot=context.bot,
-                    chat_id=query.message.chat_id,
-                    message_ids=sent_message_ids,
-                )
+        files = get_files(
+            share_token
+        )
+
+        if not files:
+
+            await query.edit_message_text(
+                "❌ Files not found."
             )
 
+            return
 
+        text = create_file_list_text(
+            total_files=len(files),
+            page=page,
+        )
+
+        keyboard = create_file_keyboard(
+            share_token=share_token,
+            files=files,
+            page=page,
+        )
+
+        await query.edit_message_text(
+            text,
+            parse_mode="Markdown",
+            reply_markup=keyboard,
+        )
+
+    # =====================================================
+    # SINGLE FILE
+    # =====================================================
+
+    elif query.data.startswith(
+        "file:"
+    ):
+
+        parts = query.data.split(
+            ":"
+        )
+
+        if len(parts) != 3:
+            return
+
+        share_token = parts[1]
+        file_index = int(parts[2])
+
+        files = get_files(
+            share_token
+        )
+
+        if not files:
+
+            await query.answer(
+                "❌ Files not found.",
+                show_alert=True,
+            )
+
+            return
+
+        if file_index < 0 or file_index >= len(files):
+
+            await query.answer(
+                "❌ Invalid file.",
+                show_alert=True,
+            )
+
+            return
+
+        file_data = files[file_index]
+
+        await query.answer(
+            "📥 Sending file..."
+        )
+
+        success = await send_one_file(
+            bot=context.bot,
+            chat_id=query.message.chat_id,
+            file_data=file_data,
+        )
+
+        if success:
+
+            await query.message.reply_text(
+                "✅ File sent successfully!\n"
+                "⏳ It will be auto deleted later."
+            )
+
+        else:
+
+            await query.message.reply_text(
+                "❌ Failed to send file."
+            )
+
+    # =====================================================
+    # SEND ALL FILES
+    # =====================================================
+
+    elif query.data.startswith(
+        "all:"
+    ):
+
+        share_token = query.data.split(
+            ":",
+            1,
+        )[1]
+
+        files = get_files(
+            share_token
+        )
+
+        if not files:
+
+            await query.answer(
+                "❌ Files not found.",
+                show_alert=True,
+            )
+
+            return
+
+        await query.answer(
+            "📥 Sending all files..."
+        )
+
+        await query.message.reply_text(
+            f"📦 Sending {len(files)} files...\n"
+            "⏳ Please wait."
+        )
+
+        await send_all_files(
+            bot=context.bot,
+            chat_id=query.message.chat_id,
+            files=files,
+    )
+        
 # =========================================================
 # HANDLE DOCUMENTS
 # =========================================================
