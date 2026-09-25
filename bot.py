@@ -511,8 +511,8 @@ async def button_callback(
         "        © *CL File Bot*"
     )
 
-    await query.edit_message_text(
-        about_text,
+        await query.edit_message_text(
+            about_text,
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -524,9 +524,8 @@ async def button_callback(
         ])
     )
 
-elif query.data == "close":
-
-    await query.message.delete()
+    elif query.data == "close":
+        await query.message.delete()
     # -----------------------------------------------------
     # TRY AGAIN - FORCE SUBSCRIBE
     # -----------------------------------------------------
