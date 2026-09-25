@@ -316,6 +316,12 @@ async def done_command(
     user = update.effective_user
     user_files = pending_files.get(user.id, [])
 
+    if user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "❌ Only admin can create share links."
+        )
+        return
+
     if not user_files:
         await update.message.reply_text(
             "❌ No files added yet.\n"
