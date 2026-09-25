@@ -314,9 +314,8 @@ async def done_command(
 
     pending_files.pop(user.id, None)
 
- 
-    def main():
-        token = BOT_TOKEN
+def main():
+    token = BOT_TOKEN
 
     if not token:
         raise ValueError("BOT_TOKEN is not set!")
