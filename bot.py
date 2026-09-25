@@ -1,9 +1,9 @@
 import logging
 import os
 import secrets
-import sqlite3
-from pymongo import MongoClient
 import threading
+
+from pymongo import MongoClient
 
 from config import (
     BOT_TOKEN,
@@ -27,6 +27,7 @@ from telegram.ext import (
     filters,
 )
 
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -34,10 +35,11 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = os.getenv("DB_PATH", "files.db")
+
 PORT = int(os.getenv("PORT", "8000"))
 
 pending_files = {}
+
 
 # MongoDB Connection
 mongo_client = MongoClient(DATABASE_URI)
@@ -46,6 +48,8 @@ mongo_db = mongo_client["leobot"]
 file_groups_collection = mongo_db["file_groups"]
 shared_files_collection = mongo_db["shared_files"]
 
+
+# Health Server
 class HealthHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -74,6 +78,7 @@ def start_health_server():
     print(f"Health server running on port {PORT}")
 
 
+# Database Initialization
 def init_db():
     file_groups_collection.create_index(
         "share_token",
@@ -85,6 +90,7 @@ def init_db():
     )
 
 
+# Save File Group
 def save_file_group(files, owner_id):
     share_token = secrets.token_urlsafe(8)
 
@@ -104,6 +110,8 @@ def save_file_group(files, owner_id):
 
     return share_token
 
+
+# Get Files
 def get_files(share_token):
     return list(
         shared_files_collection.find(
@@ -117,6 +125,7 @@ def get_files(share_token):
     )
 
 
+# Start Command
 async def start(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -163,8 +172,14 @@ async def start(
             )
         ],
         [
-            InlineKeyboardButton("📖 Help", callback_data="help"),
-            InlineKeyboardButton("ℹ️ About", callback_data="about"),
+            InlineKeyboardButton(
+                "📖 Help",
+                callback_data="help"
+            ),
+            InlineKeyboardButton(
+                "ℹ️ About",
+                callback_data="about"
+            ),
         ],
     ]
 
@@ -177,6 +192,7 @@ async def start(
     )
 
 
+# Help Command
 async def help_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -188,15 +204,54 @@ async def help_command(
         "ℹ️ Available Commands:\n\n"
         "/start - Start the bot\n"
         "/help - Show help\n"
-        "/done - Create one Share Link\n\n"
+        "/done - Create one Share Link\n"
+        "/stats - Database Statistics (Admin Only)\n\n"
         "📤 Send multiple documents one by one."
     )
 
+
+# Admin Statistics Command
+async def stats_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    if not update.message:
+        return
+
+    user = update.effective_user
+
+    if not user or user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "❌ You are not authorized to use this command."
+        )
+        return
+
+    try:
+        total_files = shared_files_collection.count_documents({})
+        total_groups = file_groups_collection.count_documents({})
+
+        await update.message.reply_text(
+            "📊 Leobot Database Statistics\n\n"
+            f"📁 Total Files: {total_files}\n"
+            f"📦 Total File Groups: {total_groups}\n"
+            "🗄️ Database: MongoDB"
+        )
+
+    except Exception as error:
+        logger.exception("Stats command failed")
+
+        await update.message.reply_text(
+            "❌ Unable to fetch database statistics."
+        )
+
+
+# Button Callback
 async def button_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
+
     await query.answer()
 
     if query.data == "help":
@@ -213,6 +268,9 @@ async def button_callback(
             "🤖 File Sharing Bot\n"
             "📁 Share multiple files using one link."
         )
+
+
+# Handle Documents
 async def handle_document(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -241,6 +299,7 @@ async def handle_document(
     )
 
 
+# Done Command
 async def done_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -281,6 +340,8 @@ async def done_command(
 
     pending_files.pop(user.id, None)
 
+
+# Main Function
 def main():
     token = BOT_TOKEN
 
@@ -301,13 +362,17 @@ def main():
     )
 
     application.add_handler(
+        CommandHandler("stats", stats_command)
+    )
+
+    application.add_handler(
         CommandHandler("done", done_command)
     )
-    
+
     application.add_handler(
         CallbackQueryHandler(button_callback)
     )
-    
+
     application.add_handler(
         MessageHandler(
             filters.Document.ALL,
