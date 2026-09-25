@@ -11,6 +11,7 @@ from config import (
     API_ID,
     API_HASH,
     CHANNELS,
+    CHANNEL_INVITE_LINKS,
     DATABASE_URI,
     LOG_CHANNEL,
     ADMIN_ID,
