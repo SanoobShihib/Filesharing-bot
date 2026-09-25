@@ -488,7 +488,7 @@ async def button_callback(
 
     elif query.data == "about":
 
-    about_text = (
+        about_text = (
         "╭━━━━━━━━━━━━━━━━━━╮\n"
         "      ✦ *CL FILE BOT* ✦\n"
         "╰━━━━━━━━━━━━━━━━━━╯\n\n"
