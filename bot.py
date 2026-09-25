@@ -307,7 +307,7 @@ async def done_command(
 
 
 def main():
-    token = os.getenv("BOT_TOKEN")
+    token = BOT_TOKEN
 
     if not token:
         raise ValueError("BOT_TOKEN is not set!")
