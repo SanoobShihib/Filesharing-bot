@@ -2,6 +2,7 @@ import logging
 import os
 import secrets
 import sqlite3
+from pymongo import MongoClient
 import threading
 
 from config import (
@@ -305,8 +306,8 @@ async def done_command(
 
     pending_files.pop(user.id, None)
 
-
-def main():
+ 
+    def main():
     token = BOT_TOKEN
 
     if not token:
