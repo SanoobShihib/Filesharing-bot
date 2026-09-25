@@ -488,12 +488,45 @@ async def button_callback(
 
     elif query.data == "about":
 
-        await query.edit_message_text(
-            "ℹ️ About\n\n"
-            "🤖 File Sharing Bot\n"
-            "📁 Share multiple files using one link."
-        )
+    about_text = (
+        "╭━━━━━━━━━━━━━━━━━━╮\n"
+        "      ✦ *CL FILE BOT* ✦\n"
+        "╰━━━━━━━━━━━━━━━━━━╯\n\n"
+        "➜ 👤 *Owner:* [Heisenberg 😈](https://t.me/heisenbergalready)\n"
+        "➜ 🛠️ *Maintained By:* `CL Team`\n"
+        "➜ 🐍 *Language:* `Python 3`\n"
+        "➜ 📚 *Library:* `python-telegram-bot`\n"
+        "➜ 🗄️ *Database:* `MongoDB`\n"
+        "➜ ☁️ *Server:* `Koyeb`\n"
+        "➜ 🔖 *Version:* `v1.0.0`\n"
+        "➜ 🟢 *Status:* `Online`\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "➜ 📂 *Multiple File Sharing*\n"
+        "➜ 🔗 *One Link For Multiple Files*\n"
+        "➜ 🔒 *Force Subscribe*\n"
+        "➜ ⏱️ *Auto File Delete*\n"
+        "➜ 👨‍💻 *Admin File Management*\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "⚡ *Fast • Simple • Secure*\n\n"
+        "        © *CL File Bot*"
+    )
 
+    await query.edit_message_text(
+        about_text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "❌ Close",
+                    callback_data="close"
+                )
+            ]
+        ])
+    )
+
+elif query.data == "close":
+
+    await query.message.delete()
     # -----------------------------------------------------
     # TRY AGAIN - FORCE SUBSCRIBE
     # -----------------------------------------------------
