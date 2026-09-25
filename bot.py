@@ -15,7 +15,6 @@ from telegram.ext import (
     filters,
 )
 
-
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -26,8 +25,9 @@ logger = logging.getLogger(__name__)
 DB_PATH = os.getenv("DB_PATH", "files.db")
 PORT = int(os.getenv("PORT", "8000"))
 
+pending_files = {}
 
-# Health check server for Koyeb
+
 class HealthHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -59,58 +59,76 @@ def start_health_server():
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS files (
+            CREATE TABLE IF NOT EXISTS file_groups (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 share_token TEXT UNIQUE NOT NULL,
-                file_id TEXT NOT NULL,
-                file_name TEXT,
-                owner_id INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                owner_id INTEGER NOT NULL
             )
         """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS shared_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                share_token TEXT NOT NULL,
+                file_id TEXT NOT NULL,
+                file_name TEXT
+            )
+        """)
+
         conn.commit()
 
 
-def save_file(file_id, file_name, owner_id):
+def save_file_group(files, owner_id):
     share_token = secrets.token_urlsafe(8)
 
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             """
-            INSERT INTO files (
+            INSERT INTO file_groups (
                 share_token,
-                file_id,
-                file_name,
                 owner_id
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?)
             """,
-            (
-                share_token,
-                file_id,
-                file_name,
-                owner_id,
-            ),
+            (share_token, owner_id),
         )
+
+        for file_data in files:
+            conn.execute(
+                """
+                INSERT INTO shared_files (
+                    share_token,
+                    file_id,
+                    file_name
+                )
+                VALUES (?, ?, ?)
+                """,
+                (
+                    share_token,
+                    file_data["file_id"],
+                    file_data["file_name"],
+                ),
+            )
+
         conn.commit()
 
     return share_token
 
 
-def get_file(share_token):
+def get_files(share_token):
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
 
-        row = conn.execute(
+        rows = conn.execute(
             """
             SELECT file_id, file_name
-            FROM files
+            FROM shared_files
             WHERE share_token = ?
             """,
             (share_token,),
-        ).fetchone()
+        ).fetchall()
 
-    return row
+    return rows
 
 
 async def start(
@@ -126,20 +144,26 @@ async def start(
         if share_token.startswith("file_"):
             share_token = share_token[5:]
 
-        file_data = get_file(share_token)
+        files = get_files(share_token)
 
-        if not file_data:
+        if not files:
             await update.message.reply_text(
-                "❌ File not found or link is invalid."
+                "❌ Files not found or link is invalid."
             )
             return
 
-        await update.message.reply_document(
-            document=file_data["file_id"],
-            caption=(
-                f"📁 {file_data['file_name'] or 'Shared File'}"
-            ),
+        await update.message.reply_text(
+            f"📦 {len(files)} files found.\n"
+            "📥 Sending your files..."
         )
+
+        for file_data in files:
+            await update.message.reply_document(
+                document=file_data["file_id"],
+                caption=(
+                    f"📁 {file_data['file_name'] or 'Shared File'}"
+                ),
+            )
 
         return
 
@@ -148,8 +172,8 @@ async def start(
     await update.message.reply_text(
         f"👋 Hello {user.first_name}!\n\n"
         "🤖 Welcome to Our File Sharing Bot!\n\n"
-        "📤 Send me a document to create a share link.\n"
-        "📥 Open a share link to receive a file."
+        "📤 Send multiple documents one by one.\n"
+        "✅ Send /done to create one Share Link."
     )
 
 
@@ -163,8 +187,9 @@ async def help_command(
     await update.message.reply_text(
         "ℹ️ Available Commands:\n\n"
         "/start - Start the bot\n"
-        "/help - Show help\n\n"
-        "📤 Send a document to create a share link."
+        "/help - Show help\n"
+        "/done - Create one Share Link\n\n"
+        "📤 Send multiple documents one by one."
     )
 
 
@@ -178,9 +203,43 @@ async def handle_document(
     document = update.message.document
     user = update.effective_user
 
-    share_token = save_file(
-        file_id=document.file_id,
-        file_name=document.file_name,
+    if user.id not in pending_files:
+        pending_files[user.id] = []
+
+    pending_files[user.id].append(
+        {
+            "file_id": document.file_id,
+            "file_name": document.file_name,
+        }
+    )
+
+    count = len(pending_files[user.id])
+
+    await update.message.reply_text(
+        f"✅ File {count} added!\n\n"
+        "📤 Send more files or use /done."
+    )
+
+
+async def done_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    if not update.message:
+        return
+
+    user = update.effective_user
+    user_files = pending_files.get(user.id, [])
+
+    if not user_files:
+        await update.message.reply_text(
+            "❌ No files added yet.\n"
+            "Please send some documents first."
+        )
+        return
+
+    share_token = save_file_group(
+        files=user_files,
         owner_id=user.id,
     )
 
@@ -190,13 +249,17 @@ async def handle_document(
         f"https://t.me/{bot_username}?start=file_{share_token}"
     )
 
+    file_count = len(user_files)
+
     await update.message.reply_text(
-        "✅ File uploaded successfully!\n\n"
-        f"📁 Name: {document.file_name or 'Unknown'}\n\n"
+        "🎉 Share Link Created!\n\n"
+        f"📦 Total Files: {file_count}\n\n"
         f"🔗 Share Link:\n{share_link}\n\n"
-        "Anyone who opens this link through Telegram "
-        "can receive the file."
+        "Anyone who opens this link can receive "
+        "all shared files."
     )
+
+    pending_files.pop(user.id, None)
 
 
 def main():
@@ -206,7 +269,6 @@ def main():
         raise ValueError("BOT_TOKEN is not set!")
 
     init_db()
-
     start_health_server()
 
     application = Application.builder().token(token).build()
@@ -217,6 +279,10 @@ def main():
 
     application.add_handler(
         CommandHandler("help", help_command)
+    )
+
+    application.add_handler(
+        CommandHandler("done", done_command)
     )
 
     application.add_handler(
