@@ -133,6 +133,13 @@ async def is_subscribed(bot, user_id):
                 user_id=user_id,
             )
 
+            logger.info(
+                "Channel %s | User %s | Status: %s",
+                channel_id,
+                user_id,
+                member.status,
+            )
+
             if member.status in ["left", "kicked"]:
                 return False
 
@@ -148,7 +155,6 @@ async def is_subscribed(bot, user_id):
             return False
 
     return True
-
 
 def subscription_keyboard(share_token):
 
