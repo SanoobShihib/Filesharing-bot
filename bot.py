@@ -2,6 +2,9 @@ import logging
 import os
 import secrets
 import sqlite3
+import threading
+
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from telegram import Update
 from telegram.ext import (
@@ -12,6 +15,7 @@ from telegram.ext import (
     filters,
 )
 
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -20,6 +24,36 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 DB_PATH = os.getenv("DB_PATH", "files.db")
+PORT = int(os.getenv("PORT", "8000"))
+
+
+# Health check server for Koyeb
+class HealthHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+    def log_message(self, format, *args):
+        return
+
+
+def start_health_server():
+    server = ThreadingHTTPServer(
+        ("0.0.0.0", PORT),
+        HealthHandler,
+    )
+
+    thread = threading.Thread(
+        target=server.serve_forever,
+        daemon=True,
+    )
+
+    thread.start()
+
+    print(f"Health server running on port {PORT}")
 
 
 def init_db():
@@ -106,6 +140,7 @@ async def start(
                 f"📁 {file_data['file_name'] or 'Shared File'}"
             ),
         )
+
         return
 
     user = update.effective_user
@@ -171,6 +206,8 @@ def main():
         raise ValueError("BOT_TOKEN is not set!")
 
     init_db()
+
+    start_health_server()
 
     application = Application.builder().token(token).build()
 
