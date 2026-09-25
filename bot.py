@@ -4,6 +4,15 @@ import secrets
 import sqlite3
 import threading
 
+from config import (
+    BOT_TOKEN,
+    API_ID,
+    API_HASH,
+    CHANNELS,
+    DATABASE_URI,
+    LOG_CHANNEL,
+)
+
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
