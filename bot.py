@@ -188,7 +188,39 @@ async def delete_file_messages(
                 "Failed to delete file message"
             )
 
+# Force Subscribe
 
+async def is_subscribed(bot, user_id):
+    if not CHANNELS:
+        return True
+
+    try:
+        channel_id = int(CHANNELS[0])
+
+        member = await bot.get_chat_member(
+            chat_id=channel_id,
+            user_id=user_id
+        )
+
+        logger.info(
+            "Channel %s | User %s | Status: %s",
+            channel_id,
+            user_id,
+            member.status
+        )
+
+        if member.status in ["left", "kicked"]:
+            return False
+
+        if member.status == "restricted":
+            return getattr(member, "is_member", False)
+
+        return True
+
+    except Exception:
+        logger.exception("Force Subscribe check failed")
+        return False
+        
 # Start Command
 
 async def start(
