@@ -281,6 +281,12 @@ async def handle_document(
     document = update.message.document
     user = update.effective_user
 
+    if user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "❌ Only admin can upload files."
+        )
+        return
+
     if user.id not in pending_files:
         pending_files[user.id] = []
 
