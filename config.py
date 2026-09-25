@@ -8,7 +8,7 @@ API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH")
 
 # Required Channels
-CHANNELS = os.getenv("CHANNELS", "")
+CHANNELS = os.getenv("CHANNELS", "").split()
 
 # Database Configuration
 DATABASE_URI = os.getenv("DATABASE_URI")
