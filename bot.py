@@ -424,12 +424,12 @@ async def start(
     ]
 
     await update.message.reply_text(
-        f"👋 Hello {user.first_name}!\n\n"
-        "🤖 Welcome to Our File Sharing Bot!\n\n"
-        "📤 Send multiple documents one by one.\n"
-        "✅ Send /done to create one Share Link.",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
+    "👋 Welcome to CL File Bot!\n\n"
+    "⚡ Fast & Secure\n"
+    "📥 Easy File Sharing\n\n"
+    "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക.",
+    reply_markup=InlineKeyboardMarkup(keyboard),
+)
 
 
 # =========================================================
