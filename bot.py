@@ -38,6 +38,12 @@ PORT = int(os.getenv("PORT", "8000"))
 
 pending_files = {}
 
+# MongoDB Connection
+mongo_client = MongoClient(DATABASE_URI)
+mongo_db = mongo_client["leobot"]
+
+file_groups_collection = mongo_db["file_groups"]
+shared_files_collection = mongo_db["shared_files"]
 
 class HealthHandler(BaseHTTPRequestHandler):
 
