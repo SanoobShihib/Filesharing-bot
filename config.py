@@ -15,3 +15,6 @@ DATABASE_URI = os.getenv("DATABASE_URI")
 
 # Logging Channel
 LOG_CHANNEL = os.getenv("LOG_CHANNEL")
+
+# Admin Configuration
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
