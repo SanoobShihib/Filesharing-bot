@@ -405,23 +405,25 @@ async def start(
     user = update.effective_user
 
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "📢 Join Update Channel",
-                url="https://t.me/Clmainchannel",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📖 Help",
-                callback_data="help",
-            ),
-            InlineKeyboardButton(
-                "ℹ️ About",
-                callback_data="about",
-            ),
-        ],
-    ]
+    [
+        InlineKeyboardButton(
+            "👥 Join Our Group",
+            url="https://t.me/+Ik14BdOewjQzYjI1",
+        )
+    ],
+    [
+        InlineKeyboardButton(
+            "📢 Join Update Channel",
+            url="https://t.me/Clmainchannel",
+        )
+    ],
+    [
+        InlineKeyboardButton(
+            "ℹ️ About",
+            callback_data="about",
+        )
+    ],
+]
 
     await update.message.reply_text(
     "👋 Welcome to CL File Bot!\n\n"
