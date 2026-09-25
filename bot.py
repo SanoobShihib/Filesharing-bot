@@ -104,40 +104,6 @@ def save_file_group(files, owner_id):
 
     return share_token
 
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            INSERT INTO file_groups (
-                share_token,
-                owner_id
-            )
-            VALUES (?, ?)
-            """,
-            (share_token, owner_id),
-        )
-
-        for file_data in files:
-            conn.execute(
-                """
-                INSERT INTO shared_files (
-                    share_token,
-                    file_id,
-                    file_name
-                )
-                VALUES (?, ?, ?)
-                """,
-                (
-                    share_token,
-                    file_data["file_id"],
-                    file_data["file_name"],
-                ),
-            )
-
-        conn.commit()
-
-    return share_token
-
-
 def get_files(share_token):
     return list(
         shared_files_collection.find(
