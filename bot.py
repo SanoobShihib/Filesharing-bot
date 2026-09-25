@@ -6,12 +6,14 @@ import threading
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, 
+InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    CallbackQueryHandler,
     filters,
 )
 
@@ -169,11 +171,25 @@ async def start(
 
     user = update.effective_user
 
+        keyboard = [
+        [
+            InlineKeyboardButton(
+                "📢 Join Update Channel",
+                url="https://t.me/Clmainchannel",
+            )
+        ],
+        [
+            InlineKeyboardButton("📖 Help", callback_data="help"),
+            InlineKeyboardButton("ℹ️ About", callback_data="about"),
+        ],
+    ]
+
     await update.message.reply_text(
         f"👋 Hello {user.first_name}!\n\n"
         "🤖 Welcome to Our File Sharing Bot!\n\n"
         "📤 Send multiple documents one by one.\n"
-        "✅ Send /done to create one Share Link."
+        "✅ Send /done to create one Share Link.",
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
 
@@ -192,7 +208,27 @@ async def help_command(
         "📤 Send multiple documents one by one."
     )
 
+async def button_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    query = update.callback_query
+    await query.answer()
 
+    if query.data == "help":
+        await query.message.reply_text(
+            "📖 Help\n\n"
+            "📤 Send your files one by one.\n"
+            "✅ After sending all files, use /done.\n"
+            "🔗 You will receive one share link."
+        )
+
+    elif query.data == "about":
+        await query.message.reply_text(
+            "ℹ️ About\n\n"
+            "🤖 File Sharing Bot\n"
+            "📁 Share multiple files using one link."
+        )
 async def handle_document(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -284,7 +320,11 @@ def main():
     application.add_handler(
         CommandHandler("done", done_command)
     )
-
+    
+    application.add_handler(
+        CallbackQueryHandler(button_callback)
+    )
+    
     application.add_handler(
         MessageHandler(
             filters.Document.ALL,
