@@ -127,7 +127,6 @@ async def is_subscribed(bot, user_id):
         return True
 
     for channel_id in CHANNELS:
-
         try:
             member = await bot.get_chat_member(
                 chat_id=int(channel_id),
@@ -137,12 +136,15 @@ async def is_subscribed(bot, user_id):
             if member.status in ["left", "kicked"]:
                 return False
 
+            if member.status == "restricted":
+                if not getattr(member, "is_member", False):
+                    return False
+
         except Exception:
             logger.exception(
                 "Subscription check failed for channel %s",
                 channel_id,
             )
-
             return False
 
     return True
