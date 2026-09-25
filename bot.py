@@ -74,29 +74,34 @@ def start_health_server():
 
 
 def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS file_groups (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                share_token TEXT UNIQUE NOT NULL,
-                owner_id INTEGER NOT NULL
-            )
-        """)
+    file_groups_collection.create_index(
+        "share_token",
+        unique=True
+    )
 
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS shared_files (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                share_token TEXT NOT NULL,
-                file_id TEXT NOT NULL,
-                file_name TEXT
-            )
-        """)
-
-        conn.commit()
+    shared_files_collection.create_index(
+        "share_token"
+    )
 
 
 def save_file_group(files, owner_id):
     share_token = secrets.token_urlsafe(8)
+
+    file_groups_collection.insert_one({
+        "share_token": share_token,
+        "owner_id": owner_id
+    })
+
+    shared_files_collection.insert_many([
+        {
+            "share_token": share_token,
+            "file_id": file_data["file_id"],
+            "file_name": file_data["file_name"]
+        }
+        for file_data in files
+    ])
+
+    return share_token
 
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
@@ -133,19 +138,16 @@ def save_file_group(files, owner_id):
 
 
 def get_files(share_token):
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-
-        rows = conn.execute(
-            """
-            SELECT file_id, file_name
-            FROM shared_files
-            WHERE share_token = ?
-            """,
-            (share_token,),
-        ).fetchall()
-
-    return rows
+    return list(
+        shared_files_collection.find(
+            {"share_token": share_token},
+            {
+                "_id": 0,
+                "file_id": 1,
+                "file_name": 1
+            }
+        )
+    )
 
 
 async def start(
@@ -314,7 +316,7 @@ async def done_command(
 
  
     def main():
-    token = BOT_TOKEN
+        token = BOT_TOKEN
 
     if not token:
         raise ValueError("BOT_TOKEN is not set!")
