@@ -4,6 +4,8 @@ import os
 import secrets
 import threading
 
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
 from pymongo import MongoClient
 
 from config import (
@@ -16,8 +18,6 @@ from config import (
     LOG_CHANNEL,
     ADMIN_ID,
 )
-
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from telegram import (
     Update,
@@ -42,13 +42,14 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
 PORT = int(os.getenv("PORT", "8000"))
 
 pending_files = {}
 
 
-# MongoDB Connection
+# =========================
+# MongoDB
+# =========================
 
 mongo_client = MongoClient(DATABASE_URI)
 
@@ -59,107 +60,141 @@ file_groups_collection = mongo_db["file_groups"]
 shared_files_collection = mongo_db["shared_files"]
 
 
-# Health Server
-
-class HealthHandler(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        self.send_response(200)
-
-        self.send_header(
-            "Content-type",
-            "text/plain",
-        )
-
-        self.end_headers()
-
-        self.wfile.write(
-            b"Bot is running!"
-        )
-
-    def log_message(self, format, *args):
-        return
-
-
-def start_health_server():
-
-    server = ThreadingHTTPServer(
-        ("0.0.0.0", PORT),
-        HealthHandler,
-    )
-
-    thread = threading.Thread(
-        target=server.serve_forever,
-        daemon=True,
-    )
-
-    thread.start()
-
-    print(
-        f"Health server running on port {PORT}"
-    )
-
-
-# Database Initialization
-
 def init_db():
+    file_groups_collection.create_index("share_token", unique=True)
+    shared_files_collection.create_index("share_token")
 
-    file_groups_collection.create_index(
-        "share_token",
-        unique=True,
-    )
-
-    shared_files_collection.create_index(
-        "share_token",
-    )
-
-
-# Save File Group
 
 def save_file_group(files, owner_id):
-
     share_token = secrets.token_urlsafe(8)
 
     file_groups_collection.insert_one(
         {
             "share_token": share_token,
             "owner_id": owner_id,
+            "files": files,
         }
-    )
-
-    shared_files_collection.insert_many(
-        [
-            {
-                "share_token": share_token,
-                "file_id": file_data["file_id"],
-                "file_name": file_data["file_name"],
-            }
-            for file_data in files
-        ]
     )
 
     return share_token
 
 
-# Get Files
-
 def get_files(share_token):
+    group = file_groups_collection.find_one(
+        {"share_token": share_token}
+    )
 
-    return list(
-        shared_files_collection.find(
-            {
-                "share_token": share_token,
-            },
-            {
-                "_id": 0,
-                "file_id": 1,
-                "file_name": 1,
-            },
-        )
+    if not group:
+        return []
+
+    return group.get("files", [])
+
+
+# =========================
+# Health Server
+# =========================
+
+class HealthHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Leobot is running")
+
+    def log_message(self, format, *args):
+        return
+
+
+def run_health_server():
+    server = ThreadingHTTPServer(
+        ("0.0.0.0", PORT),
+        HealthHandler,
+    )
+
+    server.serve_forever()
+
+
+# =========================
+# Force Subscribe
+# =========================
+
+async def is_subscribed(bot, user_id):
+    """
+    Check whether the user joined all required channels.
+    """
+
+    if not CHANNELS:
+        return True
+
+    for channel_id in CHANNELS:
+
+        try:
+            member = await bot.get_chat_member(
+                chat_id=int(channel_id),
+                user_id=user_id,
+            )
+
+            if member.status in ["left", "kicked"]:
+                return False
+
+        except Exception:
+            logger.exception(
+                "Subscription check failed for channel %s",
+                channel_id,
+            )
+
+            return False
+
+    return True
+
+
+def subscription_keyboard(share_token):
+
+    keyboard = []
+
+    for index, invite_link in enumerate(
+        CHANNEL_INVITE_LINKS,
+        start=1,
+    ):
+
+        if invite_link:
+
+            keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        f"📢 Join Channel {index}",
+                        url=invite_link,
+                    )
+                ]
+            )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "🔄 Try Again",
+                callback_data=f"check_sub:{share_token}",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+async def send_subscription_message(
+    message,
+    share_token,
+):
+
+    await message.reply_text(
+        "🔒 ആദ്യം ഞങ്ങളുടെ രണ്ട് ചാനലുകളിലും join ചെയ്യുക.\n\n"
+        "Join ചെയ്ത ശേഷം താഴെയുള്ള Try Again അമർത്തുക.",
+        reply_markup=subscription_keyboard(share_token),
     )
 
 
-# Auto Delete File Messages
+# =========================
+# Delete Sent Files
+# =========================
 
 async def delete_file_messages(
     bot,
@@ -178,18 +213,63 @@ async def delete_file_messages(
                 message_id=message_id,
             )
 
-            logger.info(
-                f"Deleted file message: {message_id}"
+        except Exception:
+            logger.exception(
+                "Could not delete message %s",
+                message_id,
+            )
+
+
+# =========================
+# Send Shared Files
+# =========================
+
+async def send_shared_files(
+    bot,
+    chat_id,
+    files,
+):
+
+    sent_message_ids = []
+
+    intro_message = await bot.send_message(
+        chat_id=chat_id,
+        text="📂 നിങ്ങളുടെ files ഇതാ:",
+    )
+
+    sent_message_ids.append(
+        intro_message.message_id
+    )
+
+    for file_data in files:
+
+        try:
+
+            sent_message = await bot.send_document(
+                chat_id=chat_id,
+                document=file_data["file_id"],
+                caption=file_data.get("caption", ""),
+            )
+
+            sent_message_ids.append(
+                sent_message.message_id
             )
 
         except Exception:
+            logger.exception("File sending failed")
 
-            logger.exception(
-                "Failed to delete file message"
-            )
+    asyncio.create_task(
+        delete_file_messages(
+            bot,
+            chat_id,
+            sent_message_ids,
+        )
+    )
 
 
+# =========================
 # Start Command
+# =========================
 
 async def start(
     update: Update,
@@ -198,6 +278,8 @@ async def start(
 
     if not update.message:
         return
+
+    user = update.effective_user
 
     if context.args:
 
@@ -212,98 +294,79 @@ async def start(
         if not files:
 
             await update.message.reply_text(
-                "❌ Files not found or link is invalid."
+                "❌ ഈ share link സാധുവല്ല അല്ലെങ്കിൽ files ലഭ്യമല്ല."
             )
 
             return
 
-        await update.message.reply_text(
-            f"📦 {len(files)} files found.\n"
-            "📥 Sending your files..."
+        subscribed = await is_subscribed(
+            context.bot,
+            user.id,
         )
 
-        sent_message_ids = []
+        if not subscribed:
 
-        for file_data in files:
-
-            sent_message = (
-                await update.message.reply_document(
-                    document=file_data["file_id"],
-                    caption=(
-                        f"📁 "
-                        f"{file_data['file_name'] or 'Shared File'}"
-                    ),
-                )
+            await send_subscription_message(
+                update.message,
+                share_token,
             )
 
-            sent_message_ids.append(
-                sent_message.message_id
-            )
+            return
 
-        # Delete only bot-sent file messages
-        # after 5 minutes
-
-        asyncio.create_task(
-            delete_file_messages(
-                bot=context.bot,
-                chat_id=update.effective_chat.id,
-                message_ids=sent_message_ids,
-            )
+        await send_shared_files(
+            context.bot,
+            update.effective_chat.id,
+            files,
         )
 
         return
 
-    user = update.effective_user
-
     keyboard = [
         [
             InlineKeyboardButton(
-                "📢 Join Update Channel",
+                "📢 Update Channel",
                 url="https://t.me/Clmainchannel",
             )
         ],
         [
             InlineKeyboardButton(
-                "📖 Help",
+                "ℹ️ Help",
                 callback_data="help",
             ),
             InlineKeyboardButton(
-                "ℹ️ About",
+                "About",
                 callback_data="about",
             ),
         ],
     ]
 
     await update.message.reply_text(
-        f"👋 Hello {user.first_name}!\n\n"
-        "🤖 Welcome to Our File Sharing Bot!\n\n"
-        "📤 Send multiple documents one by one.\n"
-        "✅ Send /done to create one Share Link.",
+        "👋 Welcome to Leobot!\n\n"
+        "Send a valid share link to receive files.",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
 
+# =========================
 # Help Command
+# =========================
 
 async def help_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
 
-    if not update.message:
-        return
-
     await update.message.reply_text(
-        "ℹ️ Available Commands:\n\n"
-        "/start - Start the bot\n"
-        "/help - Show help\n"
-        "/done - Create one Share Link\n"
-        "/stats - Show database statistics\n\n"
-        "📤 Send multiple documents one by one."
+        "📖 Help\n\n"
+        "Use a valid share link to receive files.\n"
+        "Only the admin can upload files.\n\n"
+        "Admin command: /stats"
     )
 
 
+# =========================
 # Button Callback
+# =========================
 
 async def button_callback(
     update: Update,
@@ -312,71 +375,127 @@ async def button_callback(
 
     query = update.callback_query
 
+    if not query:
+        return
+
+    data = query.data or ""
+
+    if data.startswith("check_sub:"):
+
+        share_token = data.split(":", 1)[1]
+
+        subscribed = await is_subscribed(
+            context.bot,
+            query.from_user.id,
+        )
+
+        if not subscribed:
+
+            await query.answer(
+                "ആദ്യം രണ്ട് ചാനലുകളിലും join ചെയ്യുക.",
+                show_alert=True,
+            )
+
+            return
+
+        files = get_files(share_token)
+
+        if not files:
+
+            await query.answer(
+                "❌ Share link invalid ആണ്.",
+                show_alert=True,
+            )
+
+            return
+
+        await query.answer()
+
+        try:
+            await query.edit_message_text(
+                "✅ Subscription verified!\n"
+                "📂 Files അയക്കുന്നു..."
+            )
+        except Exception:
+            pass
+
+        await send_shared_files(
+            context.bot,
+            query.message.chat_id,
+            files,
+        )
+
+        return
+
     await query.answer()
 
-    if query.data == "help":
+    if data == "help":
 
         await query.edit_message_text(
             "📖 Help\n\n"
-            "📤 Send your files one by one.\n"
-            "✅ After sending all files, use /done.\n"
-            "🔗 You will receive one share link."
+            "Share link open ചെയ്ത് files ലഭിക്കാം.\n"
+            "ആവശ്യമെങ്കിൽ രണ്ട് channels-ലും join ചെയ്യണം."
         )
 
-    elif query.data == "about":
+    elif data == "about":
 
         await query.edit_message_text(
-            "ℹ️ About\n\n"
-            "🤖 File Sharing Bot\n"
-            "📁 Share multiple files using one link."
+            "🤖 Leobot\n\n"
+            "A Telegram file-sharing bot."
         )
 
 
-# Handle Documents
+# =========================
+# Admin Document Upload
+# =========================
 
 async def handle_document(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
 
-    if not update.message or not update.message.document:
-
+    if not update.message:
         return
-
-    document = update.message.document
 
     user = update.effective_user
 
     if user.id != ADMIN_ID:
 
         await update.message.reply_text(
-            "❌ Only admin can upload files."
+            "❌ നിങ്ങൾക്ക് upload permission ഇല്ല."
         )
 
         return
 
-    if user.id not in pending_files:
+    document = update.message.document
 
-        pending_files[user.id] = []
+    if not document:
+        return
 
-    pending_files[user.id].append(
+    user_id = user.id
+
+    if user_id not in pending_files:
+
+        pending_files[user_id] = []
+
+    pending_files[user_id].append(
         {
             "file_id": document.file_id,
-            "file_name": document.file_name,
+            "file_name": document.file_name or "",
+            "caption": update.message.caption or "",
         }
     )
 
-    count = len(
-        pending_files[user.id]
-    )
-
     await update.message.reply_text(
-        f"✅ File {count} added!\n\n"
-        "📤 Send more files or use /done."
+        "✅ File saved.\n"
+        "കൂടുതൽ files അയക്കാം.\n\n"
+        "എല്ലാം കഴിഞ്ഞാൽ /done അയക്കുക."
     )
 
 
+# =========================
 # Done Command
+# =========================
 
 async def done_command(
     update: Update,
@@ -384,62 +503,50 @@ async def done_command(
 ):
 
     if not update.message:
-
         return
 
     user = update.effective_user
 
-    user_files = pending_files.get(
-        user.id,
-        [],
-    )
-
     if user.id != ADMIN_ID:
 
         await update.message.reply_text(
-            "❌ Only admin can create share links."
+            "❌ Admin മാത്രം ഉപയോഗിക്കാവുന്ന command ആണ്."
         )
 
         return
 
-    if not user_files:
+    files = pending_files.get(user.id, [])
+
+    if not files:
 
         await update.message.reply_text(
-            "❌ No files added yet.\n"
-            "Please send some documents first."
+            "❌ Pending files ഒന്നുമില്ല."
         )
 
         return
 
     share_token = save_file_group(
-        files=user_files,
-        owner_id=user.id,
+        files,
+        user.id,
     )
+
+    pending_files[user.id] = []
 
     bot_username = context.bot.username
 
     share_link = (
-        f"https://t.me/{bot_username}"
-        f"?start=file_{share_token}"
+        f"https://t.me/{bot_username}?start=file_{share_token}"
     )
-
-    file_count = len(user_files)
 
     await update.message.reply_text(
-        "🎉 Share Link Created!\n\n"
-        f"📦 Total Files: {file_count}\n\n"
-        f"🔗 Share Link:\n{share_link}\n\n"
-        "Anyone who opens this link can receive "
-        "all shared files."
-    )
-
-    pending_files.pop(
-        user.id,
-        None,
+        "✅ Share link created!\n\n"
+        f"{share_link}"
     )
 
 
+# =========================
 # Stats Command
+# =========================
 
 async def stats_command(
     update: Update,
@@ -447,101 +554,74 @@ async def stats_command(
 ):
 
     if not update.message:
-
         return
 
     user = update.effective_user
 
-    if not user or user.id != ADMIN_ID:
+    if user.id != ADMIN_ID:
 
         await update.message.reply_text(
-            "❌ You are not authorized to use this command."
+            "❌ Admin only."
         )
 
         return
 
-    try:
+    groups_count = file_groups_collection.count_documents({})
 
-        total_files = (
-            shared_files_collection.count_documents({})
+    files_count = 0
+
+    for group in file_groups_collection.find({}):
+
+        files_count += len(
+            group.get("files", [])
         )
 
-        total_groups = (
-            file_groups_collection.count_documents({})
-        )
-
-        await update.message.reply_text(
-            "📊 Leobot Database Statistics\n\n"
-            f"📁 Total Files: {total_files}\n"
-            f"📦 Total File Groups: {total_groups}\n"
-            "🗄️ Database: MongoDB"
-        )
-
-    except Exception:
-
-        logger.exception(
-            "Stats command failed"
-        )
-
-        await update.message.reply_text(
-            "❌ Unable to fetch database statistics."
-        )
+    await update.message.reply_text(
+        f"📊 Bot Statistics\n\n"
+        f"Share Groups: {groups_count}\n"
+        f"Files: {files_count}"
+    )
 
 
-# Main Function
+# =========================
+# Main
+# =========================
 
 def main():
 
-    token = BOT_TOKEN
-
-    if not token:
-
-        raise ValueError(
-            "BOT_TOKEN is not set!"
-        )
-
     init_db()
 
-    start_health_server()
+    health_thread = threading.Thread(
+        target=run_health_server,
+        daemon=True,
+    )
+
+    health_thread.start()
 
     application = (
         Application.builder()
-        .token(token)
+        .token(BOT_TOKEN)
         .build()
     )
 
     application.add_handler(
-        CommandHandler(
-            "start",
-            start,
-        )
+        CommandHandler("start", start)
     )
 
     application.add_handler(
-        CommandHandler(
-            "help",
-            help_command,
-        )
+        CommandHandler("help", help_command)
     )
 
     application.add_handler(
-        CommandHandler(
-            "done",
-            done_command,
-        )
+        CommandHandler("done", done_command)
     )
 
     application.add_handler(
-        CommandHandler(
-            "stats",
-            stats_command,
-        )
+        CommandHandler("stats", stats_command)
     )
 
     application.add_handler(
-        CallbackQueryHandler(
-            button_callback,
-        )
+        CallbackQueryHandler(button_callback)
     )
 
     application.add_handler(
@@ -551,13 +631,10 @@ def main():
         )
     )
 
-    print(
-        "🤖 File Sharing Bot is running..."
-    )
-
     application.run_polling()
 
 
 if __name__ == "__main__":
 
     main()
+
