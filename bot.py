@@ -12,6 +12,7 @@ from config import (
     CHANNELS,
     DATABASE_URI,
     LOG_CHANNEL,
+    ADMIN_ID,
 )
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
