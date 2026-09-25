@@ -52,7 +52,7 @@ pending_files = {}
 # =========================================================
 
 # നിങ്ങളുടെ private channel invite link ഇവിടെ ഇടുക
-FORCE_SUBSCRIBE_LINK = "https://t.me/+YOUR_INVITE_LINK"
+FORCE_SUBSCRIBE_LINK = "https://t.me/+TBEZZOyLdPdjODg1"
 
 
 async def is_subscribed(bot, user_id):
