@@ -170,7 +170,7 @@ async def start(
 
     user = update.effective_user
 
-        keyboard = [
+    keyboard = [
         [
             InlineKeyboardButton(
                 "📢 Join Update Channel",
