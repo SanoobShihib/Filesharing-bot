@@ -33,6 +33,11 @@ from telegram.ext import (
     filters,
 )
 
+from auto_filter.filter import (
+    create_file_keyboard,
+    create_file_list_text,
+)
+
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -264,9 +269,6 @@ async def send_shared_files(
     context,
     share_token,
 ):
-    """
-    Send all files belonging to a share token.
-    """
 
     if not update.message:
         return
@@ -274,43 +276,107 @@ async def send_shared_files(
     files = get_files(share_token)
 
     if not files:
-
         await update.message.reply_text(
             "❌ Files not found or link is invalid."
         )
-
         return
 
-    await update.message.reply_text(
-        f"📦 {len(files)} files found.\n"
-        "📥 Sending your files..."
+    text = create_file_list_text(
+        total_files=len(files),
+        page=0,
     )
+
+    keyboard = create_file_keyboard(
+        share_token=share_token,
+        files=files,
+        page=0,
+    )
+
+    await update.message.reply_text(
+        text,
+        parse_mode="Markdown",
+        reply_markup=keyboard,
+    )
+
+
+async def send_one_file(
+    bot,
+    chat_id,
+    file_data,
+):
+
+    try:
+
+        sent_message = await bot.send_document(
+            chat_id=chat_id,
+            document=file_data["file_id"],
+            caption=(
+                f"📁 "
+                f"{file_data.get('file_name') or 'Shared File'}"
+            ),
+        )
+
+        asyncio.create_task(
+            delete_file_messages(
+                bot=bot,
+                chat_id=chat_id,
+                message_ids=[
+                    sent_message.message_id
+                ],
+            )
+        )
+
+        return True
+
+    except Exception:
+
+        logger.exception(
+            "Failed to send one file"
+        )
+
+        return False
+
+
+async def send_all_files(
+    bot,
+    chat_id,
+    files,
+):
 
     sent_message_ids = []
 
     for file_data in files:
 
-        sent_message = (
-            await update.message.reply_document(
+        try:
+
+            sent_message = await bot.send_document(
+                chat_id=chat_id,
                 document=file_data["file_id"],
                 caption=(
                     f"📁 "
-                    f"{file_data['file_name'] or 'Shared File'}"
+                    f"{file_data.get('file_name') or 'Shared File'}"
                 ),
             )
-        )
 
-        sent_message_ids.append(
-            sent_message.message_id
-        )
+            sent_message_ids.append(
+                sent_message.message_id
+            )
 
-    asyncio.create_task(
-        delete_file_messages(
-            bot=context.bot,
-            chat_id=update.effective_chat.id,
-            message_ids=sent_message_ids,
+        except Exception:
+
+            logger.exception(
+                "Failed to send shared file"
+            )
+
+    if sent_message_ids:
+
+        asyncio.create_task(
+            delete_file_messages(
+                bot=bot,
+                chat_id=chat_id,
+                message_ids=sent_message_ids,
+            )
         )
-    )
 
 
 # =========================================================
