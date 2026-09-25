@@ -215,7 +215,7 @@ async def button_callback(
     await query.answer()
 
     if query.data == "help":
-        await query.message.reply_text(
+        await query.edit_message_text(
             "📖 Help\n\n"
             "📤 Send your files one by one.\n"
             "✅ After sending all files, use /done.\n"
@@ -223,7 +223,7 @@ async def button_callback(
         )
 
     elif query.data == "about":
-        await query.message.reply_text(
+        await query.edit_message_text(
             "ℹ️ About\n\n"
             "🤖 File Sharing Bot\n"
             "📁 Share multiple files using one link."
