@@ -11,7 +11,6 @@ from config import (
     API_ID,
     API_HASH,
     CHANNELS,
-    CHANNEL_INVITE_LINKS,
     DATABASE_URI,
     LOG_CHANNEL,
     ADMIN_ID,
@@ -48,7 +47,95 @@ PORT = int(os.getenv("PORT", "8000"))
 pending_files = {}
 
 
-# MongoDB Connection
+# =========================================================
+# FORCE SUBSCRIBE
+# =========================================================
+
+# നിങ്ങളുടെ private channel invite link ഇവിടെ ഇടുക
+FORCE_SUBSCRIBE_LINK = "https://t.me/+YOUR_INVITE_LINK"
+
+
+async def is_subscribed(bot, user_id):
+    """
+    Check whether the user has joined the required channel.
+    Only the first channel in CHANNELS is checked.
+    """
+
+    if not CHANNELS:
+        return True
+
+    try:
+        channel_id = int(CHANNELS[0])
+
+        member = await bot.get_chat_member(
+            chat_id=channel_id,
+            user_id=user_id,
+        )
+
+        logger.info(
+            "Channel %s | User %s | Status: %s",
+            channel_id,
+            user_id,
+            member.status,
+        )
+
+        if member.status in ["left", "kicked"]:
+            return False
+
+        if member.status == "restricted":
+            return getattr(member, "is_member", False)
+
+        return True
+
+    except Exception:
+        logger.exception(
+            "Force Subscribe check failed"
+        )
+        return False
+
+
+def subscription_keyboard(share_token):
+    """
+    Keyboard shown when user has not joined the channel.
+    """
+
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "📢 Join Channel",
+                    url=FORCE_SUBSCRIBE_LINK,
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔄 Try Again",
+                    callback_data=f"check_subscription:{share_token}",
+                )
+            ],
+        ]
+    )
+
+
+async def send_subscription_message(
+    message,
+    share_token,
+):
+    """
+    Send Force Subscribe message.
+    """
+
+    await message.reply_text(
+        "🔒 ഈ ചാനലിൽ Join ചെയ്താലേ നിങ്ങൾക്ക് ഫയൽ ലഭിക്കൂ.\n\n"
+        "📢 ആദ്യം Channel-ൽ Join ചെയ്യുക.\n"
+        "✅ Join ചെയ്ത ശേഷം Try Again അമർത്തുക.",
+        reply_markup=subscription_keyboard(share_token),
+    )
+
+
+# =========================================================
+# MONGODB CONNECTION
+# =========================================================
 
 mongo_client = MongoClient(DATABASE_URI)
 
@@ -59,11 +146,14 @@ file_groups_collection = mongo_db["file_groups"]
 shared_files_collection = mongo_db["shared_files"]
 
 
-# Health Server
+# =========================================================
+# HEALTH SERVER
+# =========================================================
 
 class HealthHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
+
         self.send_response(200)
 
         self.send_header(
@@ -100,7 +190,9 @@ def start_health_server():
     )
 
 
-# Database Initialization
+# =========================================================
+# DATABASE INITIALIZATION
+# =========================================================
 
 def init_db():
 
@@ -114,7 +206,9 @@ def init_db():
     )
 
 
-# Save File Group
+# =========================================================
+# SAVE FILE GROUP
+# =========================================================
 
 def save_file_group(files, owner_id):
 
@@ -141,7 +235,9 @@ def save_file_group(files, owner_id):
     return share_token
 
 
-# Get Files
+# =========================================================
+# GET FILES
+# =========================================================
 
 def get_files(share_token):
 
@@ -159,7 +255,67 @@ def get_files(share_token):
     )
 
 
-# Auto Delete File Messages
+# =========================================================
+# SEND FILES
+# =========================================================
+
+async def send_shared_files(
+    update,
+    context,
+    share_token,
+):
+    """
+    Send all files belonging to a share token.
+    """
+
+    if not update.message:
+        return
+
+    files = get_files(share_token)
+
+    if not files:
+
+        await update.message.reply_text(
+            "❌ Files not found or link is invalid."
+        )
+
+        return
+
+    await update.message.reply_text(
+        f"📦 {len(files)} files found.\n"
+        "📥 Sending your files..."
+    )
+
+    sent_message_ids = []
+
+    for file_data in files:
+
+        sent_message = (
+            await update.message.reply_document(
+                document=file_data["file_id"],
+                caption=(
+                    f"📁 "
+                    f"{file_data['file_name'] or 'Shared File'}"
+                ),
+            )
+        )
+
+        sent_message_ids.append(
+            sent_message.message_id
+        )
+
+    asyncio.create_task(
+        delete_file_messages(
+            bot=context.bot,
+            chat_id=update.effective_chat.id,
+            message_ids=sent_message_ids,
+        )
+    )
+
+
+# =========================================================
+# AUTO DELETE FILE MESSAGES
+# =========================================================
 
 async def delete_file_messages(
     bot,
@@ -188,40 +344,10 @@ async def delete_file_messages(
                 "Failed to delete file message"
             )
 
-# Force Subscribe
 
-async def is_subscribed(bot, user_id):
-    if not CHANNELS:
-        return True
-
-    try:
-        channel_id = int(CHANNELS[0])
-
-        member = await bot.get_chat_member(
-            chat_id=channel_id,
-            user_id=user_id
-        )
-
-        logger.info(
-            "Channel %s | User %s | Status: %s",
-            channel_id,
-            user_id,
-            member.status
-        )
-
-        if member.status in ["left", "kicked"]:
-            return False
-
-        if member.status == "restricted":
-            return getattr(member, "is_member", False)
-
-        return True
-
-    except Exception:
-        logger.exception("Force Subscribe check failed")
-        return False
-        
-# Start Command
+# =========================================================
+# START COMMAND
+# =========================================================
 
 async def start(
     update: Update,
@@ -231,59 +357,50 @@ async def start(
     if not update.message:
         return
 
+    # -----------------------------------------------------
+    # SHARE FILE LINK
+    # -----------------------------------------------------
+
     if context.args:
 
         share_token = context.args[0]
 
         if share_token.startswith("file_"):
-
             share_token = share_token[5:]
 
-        files = get_files(share_token)
+        # -------------------------------------------------
+        # FORCE SUBSCRIBE ONLY FOR FILE LINKS
+        # -------------------------------------------------
 
-        if not files:
+        user = update.effective_user
 
-            await update.message.reply_text(
-                "❌ Files not found or link is invalid."
+        if not await is_subscribed(
+            context.bot,
+            user.id,
+        ):
+
+            await send_subscription_message(
+                update.message,
+                share_token,
             )
 
             return
 
-        await update.message.reply_text(
-            f"📦 {len(files)} files found.\n"
-            "📥 Sending your files..."
-        )
+        # -------------------------------------------------
+        # USER SUBSCRIBED - SEND FILES
+        # -------------------------------------------------
 
-        sent_message_ids = []
-
-        for file_data in files:
-
-            sent_message = (
-                await update.message.reply_document(
-                    document=file_data["file_id"],
-                    caption=(
-                        f"📁 "
-                        f"{file_data['file_name'] or 'Shared File'}"
-                    ),
-                )
-            )
-
-            sent_message_ids.append(
-                sent_message.message_id
-            )
-
-        # Delete only bot-sent file messages
-        # after 5 minutes
-
-        asyncio.create_task(
-            delete_file_messages(
-                bot=context.bot,
-                chat_id=update.effective_chat.id,
-                message_ids=sent_message_ids,
-            )
+        await send_shared_files(
+            update,
+            context,
+            share_token,
         )
 
         return
+
+    # -----------------------------------------------------
+    # NORMAL START
+    # -----------------------------------------------------
 
     user = update.effective_user
 
@@ -315,7 +432,9 @@ async def start(
     )
 
 
-# Help Command
+# =========================================================
+# HELP COMMAND
+# =========================================================
 
 async def help_command(
     update: Update,
@@ -335,7 +454,9 @@ async def help_command(
     )
 
 
-# Button Callback
+# =========================================================
+# BUTTON CALLBACK
+# =========================================================
 
 async def button_callback(
     update: Update,
@@ -346,6 +467,10 @@ async def button_callback(
 
     await query.answer()
 
+    # -----------------------------------------------------
+    # HELP
+    # -----------------------------------------------------
+
     if query.data == "help":
 
         await query.edit_message_text(
@@ -355,6 +480,10 @@ async def button_callback(
             "🔗 You will receive one share link."
         )
 
+    # -----------------------------------------------------
+    # ABOUT
+    # -----------------------------------------------------
+
     elif query.data == "about":
 
         await query.edit_message_text(
@@ -363,8 +492,111 @@ async def button_callback(
             "📁 Share multiple files using one link."
         )
 
+    # -----------------------------------------------------
+    # TRY AGAIN - FORCE SUBSCRIBE
+    # -----------------------------------------------------
 
-# Handle Documents
+    elif query.data.startswith(
+        "check_subscription:"
+    ):
+
+        share_token = query.data.split(
+            ":",
+            1
+        )[1]
+
+        user = query.from_user
+
+        subscribed = await is_subscribed(
+            context.bot,
+            user.id,
+        )
+
+        if not subscribed:
+
+            await query.answer(
+                "❌ നിങ്ങൾ ഇപ്പോഴും Channel Join ചെയ്തിട്ടില്ല.",
+                show_alert=True,
+            )
+
+            return
+
+        # User joined successfully
+        await query.answer(
+            "✅ Subscription verified!"
+        )
+
+        try:
+
+            await query.edit_message_text(
+                "✅ Channel subscription verified!\n"
+                "📥 Your files are being sent..."
+            )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to edit subscription message"
+            )
+
+        files = get_files(share_token)
+
+        if not files:
+
+            try:
+
+                await query.message.reply_text(
+                    "❌ Files not found or link is invalid."
+                )
+
+            except Exception:
+
+                logger.exception(
+                    "Failed to send invalid-link message"
+                )
+
+            return
+
+        sent_message_ids = []
+
+        for file_data in files:
+
+            try:
+
+                sent_message = (
+                    await query.message.reply_document(
+                        document=file_data["file_id"],
+                        caption=(
+                            f"📁 "
+                            f"{file_data['file_name'] or 'Shared File'}"
+                        ),
+                    )
+                )
+
+                sent_message_ids.append(
+                    sent_message.message_id
+                )
+
+            except Exception:
+
+                logger.exception(
+                    "Failed to send shared file"
+                )
+
+        if sent_message_ids:
+
+            asyncio.create_task(
+                delete_file_messages(
+                    bot=context.bot,
+                    chat_id=query.message.chat_id,
+                    message_ids=sent_message_ids,
+                )
+            )
+
+
+# =========================================================
+# HANDLE DOCUMENTS
+# =========================================================
 
 async def handle_document(
     update: Update,
@@ -372,7 +604,6 @@ async def handle_document(
 ):
 
     if not update.message or not update.message.document:
-
         return
 
     document = update.message.document
@@ -408,7 +639,9 @@ async def handle_document(
     )
 
 
-# Done Command
+# =========================================================
+# DONE COMMAND
+# =========================================================
 
 async def done_command(
     update: Update,
@@ -416,7 +649,6 @@ async def done_command(
 ):
 
     if not update.message:
-
         return
 
     user = update.effective_user
@@ -471,7 +703,9 @@ async def done_command(
     )
 
 
-# Stats Command
+# =========================================================
+# STATS COMMAND
+# =========================================================
 
 async def stats_command(
     update: Update,
@@ -479,7 +713,6 @@ async def stats_command(
 ):
 
     if not update.message:
-
         return
 
     user = update.effective_user
@@ -520,7 +753,9 @@ async def stats_command(
         )
 
 
-# Main Function
+# =========================================================
+# MAIN FUNCTION
+# =========================================================
 
 def main():
 
@@ -590,6 +825,9 @@ def main():
     application.run_polling()
 
 
-if __name__ == "__main__":
+# =========================================================
+# RUN BOT
+# =========================================================
 
+if __name__ == "__main__":
     main()
