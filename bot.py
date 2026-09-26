@@ -671,107 +671,112 @@ async def button_callback(
         return
 
 
-# =====================================================
-# ADMIN UPLOAD - LANGUAGE SELECTION
-# =====================================================
+    # =====================================================
+    # ADMIN UPLOAD - LANGUAGE SELECTION
+    # =====================================================
 
-if query.data.startswith("upload_lang:"):
+    if query.data.startswith("upload_lang:"):
 
-    parts = query.data.split(":")
+        parts = query.data.split(":")
 
-    if len(parts) != 3:
-        return
+        if len(parts) != 3:
+            return
 
-    file_index = int(parts[1])
-    language_code = parts[2]
+        file_index = int(parts[1])
+        language_code = parts[2]
 
-    user_id = query.from_user.id
+        user_id = query.from_user.id
 
-    if user_id != ADMIN_ID:
-        await query.answer(
-            "❌ Only admin can use this.",
-            show_alert=True,
+        if user_id != ADMIN_ID:
+            await query.answer(
+                "❌ Only admin can use this.",
+                show_alert=True,
+            )
+            return
+
+        user_files = pending_files.get(
+            user_id,
+            [],
         )
-        return
 
-    user_files = pending_files.get(
-        user_id,
-        [],
-    )
+        if (
+            file_index < 0
+            or file_index >= len(user_files)
+        ):
+            await query.answer(
+                "❌ Invalid file.",
+                show_alert=True,
+            )
+            return
 
-    if file_index < 0 or file_index >= len(user_files):
-        await query.answer(
-            "❌ Invalid file.",
-            show_alert=True,
+        language_names = {
+            "ml": "Malayalam",
+            "ta": "Tamil",
+            "en": "English",
+            "hi": "Hindi",
+            "te": "Telugu",
+            "kn": "Kannada",
+            "pa": "Punjabi",
+            "bn": "Bengali",
+            "mr": "Marathi",
+            "bho": "Bhojpuri",
+            "dual": "Dual Audio",
+            "multi": "Multi Audio",
+        }
+
+        language_name = language_names.get(
+            language_code,
+            "Unknown",
         )
+
+        pending_files[user_id][file_index][
+            "language"
+        ] = language_name
+
+        quality_keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "360p",
+                        callback_data=f"upload_quality:{file_index}:360",
+                    ),
+                    InlineKeyboardButton(
+                        "480p",
+                        callback_data=f"upload_quality:{file_index}:480",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        "720p",
+                        callback_data=f"upload_quality:{file_index}:720",
+                    ),
+                    InlineKeyboardButton(
+                        "1080p",
+                        callback_data=f"upload_quality:{file_index}:1080",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🎞️ 4K",
+                        callback_data=f"upload_quality:{file_index}:2160",
+                    ),
+                    InlineKeyboardButton(
+                        "🌐 Other",
+                        callback_data=f"upload_quality:{file_index}:other",
+                    ),
+                ],
+            ]
+        )
+
+        await query.edit_message_text(
+            f"📁 *File {file_index + 1}*\n\n"
+            f"🌐 Language: *{language_name}*\n\n"
+            "🎚️ *SELECT QUALITY:*",
+            parse_mode="Markdown",
+            reply_markup=quality_keyboard,
+        )
+
         return
-
-    language_names = {
-        "ml": "Malayalam",
-        "ta": "Tamil",
-        "en": "English",
-        "hi": "Hindi",
-        "te": "Telugu",
-        "kn": "Kannada",
-        "pa": "Punjabi",
-        "bn": "Bengali",
-        "mr": "Marathi",
-        "bho": "Bhojpuri",
-        "dual": "Dual Audio",
-        "multi": "Multi Audio",
-    }
-
-    language_name = language_names.get(
-        language_code,
-        "Unknown",
-    )
-
-    pending_files[user_id][file_index]["language"] = language_name
-
-    quality_keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "360p",
-                    callback_data=f"upload_quality:{file_index}:360",
-                ),
-                InlineKeyboardButton(
-                    "480p",
-                    callback_data=f"upload_quality:{file_index}:480",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "720p",
-                    callback_data=f"upload_quality:{file_index}:720",
-                ),
-                InlineKeyboardButton(
-                    "1080p",
-                    callback_data=f"upload_quality:{file_index}:1080",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "🎞️ 4K",
-                    callback_data=f"upload_quality:{file_index}:2160",
-                ),
-                InlineKeyboardButton(
-                    "🌐 Other",
-                    callback_data=f"upload_quality:{file_index}:other",
-                ),
-            ],
-        ]
-    )
-
-    await query.edit_message_text(
-        f"📁 *File {file_index + 1}*\n\n"
-        f"🌐 Language: *{language_name}*\n\n"
-        "🎚️ *SELECT QUALITY:*",
-        parse_mode="Markdown",
-        reply_markup=quality_keyboard,
-    )
-
-    return
     
     # =====================================================
     # ADMIN UPLOAD - QUALITY SELECTION
@@ -801,7 +806,10 @@ if query.data.startswith("upload_lang:"):
             [],
         )
 
-        if file_index < 0 or file_index >= len(user_files):
+        if (
+            file_index < 0
+            or file_index >= len(user_files)
+        ):
             await query.answer(
                 "❌ Invalid file.",
                 show_alert=True,
@@ -828,11 +836,17 @@ if query.data.startswith("upload_lang:"):
 
         file_name = pending_files[user_id][
             file_index
-        ].get("file_name", "Unknown File")
+        ].get(
+            "file_name",
+            "Unknown File",
+        )
 
         language_name = pending_files[user_id][
             file_index
-        ].get("language", "Unknown")
+        ].get(
+            "language",
+            "Unknown",
+        )
 
         await query.edit_message_text(
             f"✅ *File {file_index + 1} ready!*\n\n"
@@ -844,7 +858,6 @@ if query.data.startswith("upload_lang:"):
         )
 
         return
-
     # =====================================================
     # HELP
     # =====================================================
