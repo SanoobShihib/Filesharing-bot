@@ -470,40 +470,40 @@ async def start(
 
     user = update.effective_user
 
-    keyboard = [
-    [
-        InlineKeyboardButton(
-            "👥 Join Our Group",
-            url="https://t.me/+Ik14BdOewjQzYjI1",
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            "📢 Join Update Channel",
-            url="https://t.me/Clmainchannel",
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            "ℹ️ About",
-            callback_data="about",
-        )
-    ],
-]
+        keyboard = [
+        [
+            InlineKeyboardButton(
+                "👥 Join Our Group",
+                url="https://t.me/+Ik14BdOewjQzYjI1",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📢 Join Update Channel",
+                url="https://t.me/Clmainchannel",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "ℹ️ About",
+                callback_data="about",
+            )
+        ],
+    ]
 
-welcome_text = (
-    f"*Hey {user.first_name} ♥️*\n\n"
-    "*ഞാൻ ഒരു ഗ്രൂപ്പ് മാനേജർ ബോട്ട് ആണ്, "
-    "ചിത്രലോകം ഗ്രൂപ്പിന് വേണ്ടി മാത്രമാണ് എന്നെ നിർമിച്ചിരിക്കുന്നത്.*\n\n"
-    "*വെറുതെ അവിടേം ഇവിടേം ഞെക്കി സമയം കളയണ്ട ..*\n\n"
-    "*എന്നെ ചിത്രലോകം ഗ്രൂപ്പിൽ മാത്രമേ ഉപയോഗിക്കാൻ കഴിയൂ.*"
-)
+    welcome_text = (
+        f"*Hey {user.first_name} ♥️*\n\n"
+        "*ഞാൻ ഒരു ഗ്രൂപ്പ് മാനേജർ ബോട്ട് ആണ്, "
+        "ചിത്രലോകം ഗ്രൂപ്പിന് വേണ്ടി മാത്രമാണ് എന്നെ നിർമിച്ചിരിക്കുന്നത്.*\n\n"
+        "*വെറുതെ അവിടേം ഇവിടേം ഞെക്കി സമയം കളയണ്ട ..*\n\n"
+        "*എന്നെ ചിത്രലോകം ഗ്രൂപ്പിൽ മാത്രമേ ഉപയോഗിക്കാൻ കഴിയൂ.*"
+    )
 
-await update.message.reply_text(
-    welcome_text,
-    parse_mode="Markdown",
-    reply_markup=InlineKeyboardMarkup(keyboard),
-)
+    await update.message.reply_text(
+        welcome_text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
 
 
 # =========================================================
