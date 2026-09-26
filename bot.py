@@ -599,11 +599,12 @@ async def button_callback(
     )
 
     return
+    
 # =====================================================
 # HOME
 # =====================================================
 
-elif query.data == "home":
+if query.data == "home":
 
     home_text = (
         "👋 *Welcome to CL File Bot!*\n\n"
