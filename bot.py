@@ -512,14 +512,17 @@ async def help_command(
     if not update.message:
         return
 
-    await update.message.reply_text(
-        "ℹ️ Available Commands:\n\n"
-        "/start - Start the bot\n"
-        "/help - Show help\n"
-        "/done - Create one Share Link\n"
-        "/stats - Show database statistics\n\n"
-        "📤 Send multiple documents one by one."
-    )
+    await update.message.reply_photo(
+    photo="https://radare.arzfun.com/api/tg/photo?id=AgACAgUAAxkBAAENPs5qt4WcROc5Mu_lzlg7N5EvS16UMwACxxFrG9YyuFUcvoj3MsxeoQEAAwIAA3kAAz0E",
+    caption=(
+        "👋 *Welcome to CL File Bot!*\n\n"
+        "🚀 *Fast & Secure*\n"
+        "📤 *Easy File Sharing*\n\n"
+        "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
+    ),
+    parse_mode="Markdown",
+    reply_markup=InlineKeyboardMarkup(keyboard),
+)
 
 
 # =========================================================
