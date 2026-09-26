@@ -606,7 +606,7 @@ async def button_callback(
 
     elif query.data == "home":
 
-    await query.edit_message_caption(
+        await query.edit_message_caption(
         caption=(
             "👋 *Welcome to CL File Bot!*\n\n"
             "⚡ Fast & Secure\n"
