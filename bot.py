@@ -232,14 +232,6 @@ def save_file_group(files, owner_id):
                 "share_token": share_token,
                 "file_id": file_data["file_id"],
                 "file_name": file_data["file_name"],
-                "language": file_data.get(
-                    "language",
-                    "Unknown",
-                ),
-                "quality": file_data.get(
-                    "quality",
-                    "Unknown",
-                ),
             }
             for file_data in files
         ]
@@ -263,8 +255,6 @@ def get_files(share_token):
                 "_id": 0,
                 "file_id": 1,
                 "file_name": 1,
-                "language": 1,
-                "quality": 1,
             },
         )
     )
@@ -545,323 +535,6 @@ async def button_callback(
 
     await query.answer()
 
-# =====================================================
-# FILE FILTER MENUS
-# =====================================================
-
-    from auto_filter.filter import (
-        filter_files,
-        create_language_keyboard,
-        create_quality_keyboard,
-    )
-
-    if query.data.startswith("langmenu:"):
-
-        share_token = query.data.split(":", 1)[1]
-
-        await query.edit_message_text(
-            "🌐 *SELECT LANGUAGE:*",
-            parse_mode="Markdown",
-            reply_markup=create_language_keyboard(
-                share_token
-            ),
-        )
-
-        return
-
-    if query.data.startswith("qualmenu:"):
-
-        share_token = query.data.split(":", 1)[1]
-
-        await query.edit_message_text(
-            "🎚️ *SELECT QUALITY:*",
-            parse_mode="Markdown",
-            reply_markup=create_quality_keyboard(
-                share_token
-            ),
-        )
-
-        return
-
-    # =====================================================
-    # FILE FILTER SELECTION
-    # =====================================================
-
-    if (
-        query.data.startswith("setlang:")
-        or query.data.startswith("setqual:")
-        or query.data.startswith("back:")
-    ):
-
-        from auto_filter.filter import (
-            filter_files,
-            create_file_keyboard,
-            create_file_list_text,
-        )
-
-        parts = query.data.split(":")
-
-        share_token = parts[1]
-
-        filters = context.user_data.setdefault(
-            "file_filters",
-            {}
-        )
-
-        state = filters.setdefault(
-            share_token,
-            {
-                "language": "all",
-                "quality": "all",
-                "page": 0,
-            },
-        )
-
-        if query.data.startswith("setlang:"):
-
-            language_code = parts[2]
-
-            state["language"] = language_code
-            state["page"] = 0
-
-        elif query.data.startswith("setqual:"):
-
-            quality_code = parts[2]
-
-            state["quality"] = quality_code
-            state["page"] = 0
-
-        elif query.data.startswith("back:"):
-
-            pass
-
-        all_files = get_files(
-            share_token
-        )
-
-        await query.message.reply_text(
-            f"DEBUG: {len(all_files)} files found"
-        )
-
-        filtered = filter_files(
-            all_files,
-            language=state["language"],
-            quality=state["quality"],
-        )
-
-        page = state["page"]
-
-        text = create_file_list_text(
-            total_files=len(filtered),
-            page=page,
-            language=state["language"],
-            quality=state["quality"],
-        )
-
-        keyboard = create_file_keyboard(
-            share_token,
-            filtered,
-            page=page,
-            language=state["language"],
-            quality=state["quality"],
-        )
-
-        await query.edit_message_text(
-            text,
-            parse_mode="Markdown",
-            reply_markup=keyboard,
-        )
-
-        return
-
-
-    # =====================================================
-    # ADMIN UPLOAD - LANGUAGE SELECTION
-    # =====================================================
-
-    if query.data.startswith("upload_lang:"):
-
-        parts = query.data.split(":")
-
-        if len(parts) != 3:
-            return
-
-        file_index = int(parts[1])
-        language_code = parts[2]
-
-        user_id = query.from_user.id
-
-        if user_id != ADMIN_ID:
-            await query.answer(
-                "❌ Only admin can use this.",
-                show_alert=True,
-            )
-            return
-
-        user_files = pending_files.get(
-            user_id,
-            [],
-        )
-
-        if (
-            file_index < 0
-            or file_index >= len(user_files)
-        ):
-            await query.answer(
-                "❌ Invalid file.",
-                show_alert=True,
-            )
-            return
-
-        language_names = {
-            "ml": "Malayalam",
-            "ta": "Tamil",
-            "en": "English",
-            "hi": "Hindi",
-            "te": "Telugu",
-            "kn": "Kannada",
-            "pa": "Punjabi",
-            "bn": "Bengali",
-            "mr": "Marathi",
-            "bho": "Bhojpuri",
-            "dual": "Dual Audio",
-            "multi": "Multi Audio",
-        }
-
-        language_name = language_names.get(
-            language_code,
-            "Unknown",
-        )
-
-        pending_files[user_id][file_index][
-            "language"
-        ] = language_name
-
-        quality_keyboard = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "360p",
-                        callback_data=f"upload_quality:{file_index}:360",
-                    ),
-                    InlineKeyboardButton(
-                        "480p",
-                        callback_data=f"upload_quality:{file_index}:480",
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        "720p",
-                        callback_data=f"upload_quality:{file_index}:720",
-                    ),
-                    InlineKeyboardButton(
-                        "1080p",
-                        callback_data=f"upload_quality:{file_index}:1080",
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🎞️ 4K",
-                        callback_data=f"upload_quality:{file_index}:2160",
-                    ),
-                    InlineKeyboardButton(
-                        "🌐 Other",
-                        callback_data=f"upload_quality:{file_index}:other",
-                    ),
-                ],
-            ]
-        )
-
-        await query.edit_message_text(
-            f"📁 *File {file_index + 1}*\n\n"
-            f"🌐 Language: *{language_name}*\n\n"
-            "🎚️ *SELECT QUALITY:*",
-            parse_mode="Markdown",
-            reply_markup=quality_keyboard,
-        )
-
-        return
-    
-    # =====================================================
-    # ADMIN UPLOAD - QUALITY SELECTION
-    # =====================================================
-
-    if query.data.startswith("upload_quality:"):
-
-        parts = query.data.split(":")
-
-        if len(parts) != 3:
-            return
-
-        file_index = int(parts[1])
-        quality_code = parts[2]
-
-        user_id = query.from_user.id
-
-        if user_id != ADMIN_ID:
-            await query.answer(
-                "❌ Only admin can use this.",
-                show_alert=True,
-            )
-            return
-
-        user_files = pending_files.get(
-            user_id,
-            [],
-        )
-
-        if (
-            file_index < 0
-            or file_index >= len(user_files)
-        ):
-            await query.answer(
-                "❌ Invalid file.",
-                show_alert=True,
-            )
-            return
-
-        quality_names = {
-            "360": "360p",
-            "480": "480p",
-            "720": "720p",
-            "1080": "1080p",
-            "2160": "4K",
-            "other": "Other",
-        }
-
-        quality_name = quality_names.get(
-            quality_code,
-            "Other",
-        )
-
-        pending_files[user_id][file_index][
-            "quality"
-        ] = quality_name
-
-        file_name = pending_files[user_id][
-            file_index
-        ].get(
-            "file_name",
-            "Unknown File",
-        )
-
-        language_name = pending_files[user_id][
-            file_index
-        ].get(
-            "language",
-            "Unknown",
-        )
-
-        await query.edit_message_text(
-            f"✅ *File {file_index + 1} ready!*\n\n"
-            f"📄 `{file_name}`\n\n"
-            f"🌐 Language: *{language_name}*\n"
-            f"🎚️ Quality: *{quality_name}*\n\n"
-            "📤 Send the next file, or use /done.",
-            parse_mode="Markdown",
-        )
-
-        return
     # =====================================================
     # HELP
     # =====================================================
@@ -1009,58 +682,27 @@ async def button_callback(
         share_token = parts[1]
         page = int(parts[2])
 
-        from auto_filter.filter import (
-            filter_files,
-            create_file_keyboard,
-            create_file_list_text,
-        )
-
-        filters = context.user_data.setdefault(
-            "file_filters",
-            {}
-        )
-
-        state = filters.setdefault(
-            share_token,
-            {
-                "language": "all",
-                "quality": "all",
-                "page": 0,
-            },
-        )
-
-        state["page"] = page
-
-        all_files = get_files(
+        files = get_files(
             share_token
         )
 
-        filtered = filter_files(
-            all_files,
-            language=state["language"],
-            quality=state["quality"],
-        )
+        if not files:
 
-        if not filtered:
             await query.edit_message_text(
-                "❌ *Files not found*",
-                parse_mode="Markdown",
+                "❌ Files not found."
             )
+
             return
 
         text = create_file_list_text(
-            total_files=len(filtered),
+            total_files=len(files),
             page=page,
-            language=state["language"],
-            quality=state["quality"],
         )
 
         keyboard = create_file_keyboard(
             share_token=share_token,
-            files=filtered,
+            files=files,
             page=page,
-            language=state["language"],
-            quality=state["quality"],
         )
 
         await query.edit_message_text(
@@ -1068,7 +710,7 @@ async def button_callback(
             parse_mode="Markdown",
             reply_markup=keyboard,
         )
-    
+
     # =====================================================
     # SINGLE FILE
     # =====================================================
@@ -1087,30 +729,8 @@ async def button_callback(
         share_token = parts[1]
         file_index = int(parts[2])
 
-        from auto_filter.filter import filter_files
-
-        filters = context.user_data.setdefault(
-            "file_filters",
-            {}
-        )
-
-        state = filters.setdefault(
-            share_token,
-            {
-                "language": "all",
-                "quality": "all",
-                "page": 0,
-            },
-        )
-
-        all_files = get_files(
+        files = get_files(
             share_token
-        )
-
-        files = filter_files(
-            all_files,
-            language=state["language"],
-            quality=state["quality"],
         )
 
         if not files:
@@ -1122,10 +742,7 @@ async def button_callback(
 
             return
 
-        if (
-            file_index < 0
-            or file_index >= len(files)
-        ):
+        if file_index < 0 or file_index >= len(files):
 
             await query.answer(
                 "❌ Invalid file.",
@@ -1158,7 +775,7 @@ async def button_callback(
             await query.message.reply_text(
                 "❌ Failed to send file."
             )
-    
+
     # =====================================================
     # SEND ALL FILES
     # =====================================================
@@ -1172,30 +789,8 @@ async def button_callback(
             1,
         )[1]
 
-        from auto_filter.filter import filter_files
-
-        filters = context.user_data.setdefault(
-            "file_filters",
-            {}
-        )
-
-        state = filters.setdefault(
-            share_token,
-            {
-                "language": "all",
-                "quality": "all",
-                "page": 0,
-            },
-        )
-
-        all_files = get_files(
+        files = get_files(
             share_token
-        )
-
-        files = filter_files(
-            all_files,
-            language=state["language"],
-            quality=state["quality"],
         )
 
         if not files:
@@ -1220,7 +815,7 @@ async def button_callback(
             bot=context.bot,
             chat_id=query.message.chat_id,
             files=files,
-        )
+    )
         
 # =========================================================
 # HANDLE DOCUMENTS
@@ -1235,6 +830,7 @@ async def handle_document(
         return
 
     document = update.message.document
+
     user = update.effective_user
 
     if user.id != ADMIN_ID:
@@ -1246,92 +842,23 @@ async def handle_document(
         return
 
     if user.id not in pending_files:
+
         pending_files[user.id] = []
 
     pending_files[user.id].append(
         {
             "file_id": document.file_id,
             "file_name": document.file_name,
-            "language": None,
-            "quality": None,
         }
     )
 
-    file_index = len(
+    count = len(
         pending_files[user.id]
-    ) - 1
-
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "🇮🇳 MALAYALAM",
-                    callback_data=f"upload_lang:{file_index}:ml",
-                ),
-                InlineKeyboardButton(
-                    "🇮🇳 TAMIL",
-                    callback_data=f"upload_lang:{file_index}:ta",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "🇬🇧 ENGLISH",
-                    callback_data=f"upload_lang:{file_index}:en",
-                ),
-                InlineKeyboardButton(
-                    "🇮🇳 HINDI",
-                    callback_data=f"upload_lang:{file_index}:hi",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "🇮🇳 TELUGU",
-                    callback_data=f"upload_lang:{file_index}:te",
-                ),
-                InlineKeyboardButton(
-                    "🇮🇳 KANNADA",
-                    callback_data=f"upload_lang:{file_index}:kn",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "🇮🇳 PUNJABI",
-                    callback_data=f"upload_lang:{file_index}:pa",
-                ),
-                InlineKeyboardButton(
-                    "🇮🇳 BENGALI",
-                    callback_data=f"upload_lang:{file_index}:bn",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "🇮🇳 MARATHI",
-                    callback_data=f"upload_lang:{file_index}:mr",
-                ),
-                InlineKeyboardButton(
-                    "🇮🇳 BHOJPURI",
-                    callback_data=f"upload_lang:{file_index}:bho",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "🔊 DUAL AUDIO",
-                    callback_data=f"upload_lang:{file_index}:dual",
-                ),
-                InlineKeyboardButton(
-                    "🎵 MULTI AUDIO",
-                    callback_data=f"upload_lang:{file_index}:multi",
-                ),
-            ],
-        ]
     )
 
     await update.message.reply_text(
-        f"📁 *File {file_index + 1}*\n\n"
-        f"`{document.file_name}`\n\n"
-        "🌐 *SELECT YOUR LANGUAGE:*",
-        parse_mode="Markdown",
-        reply_markup=keyboard,
+        f"✅ File {count} added!\n\n"
+        "📤 Send more files or use /done."
     )
 
 
