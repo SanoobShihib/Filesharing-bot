@@ -554,65 +554,68 @@ async def button_callback(
         )
 
     # =====================================================
-    # ABOUT
-    # =====================================================
+# ABOUT
+# =====================================================
 
-    elif query.data == "about":
+elif query.data == "about":
 
-        about_text = (
-            "╭━━━━━━━━━━━━━━━━━━╮\n"
-            "      ✦ *CL FILE BOT* ✦\n"
-            "╰━━━━━━━━━━━━━━━━━━╯\n\n"
-            "➜ 👤 *Owner:* Heisenberg 😈\n"
-            "➜ 🛠️ *Maintained By:* `CL Team`\n"
-            "➜ 🐍 *Language:* `Python 3`\n"
-            "➜ 📚 *Library:* `python-telegram-bot`\n"
-            "➜ 🗄️ *Database:* `MongoDB`\n"
-            "➜ ☁️ *Server:* `Koyeb`\n"
-            "➜ 🔖 *Version:* `v1.1.0`\n"
-            "➜ 🟢 *Status:* `Online`\n\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "➜ 📂 *Multiple File Sharing*\n"
-            "➜ 🔗 *One Link For Multiple Files*\n"
-            "➜ 🔍 *File List / Auto Filter*\n"
-            "➜ 📦 *Send All Files*\n"
-            "➜ 🔒 *Force Subscribe*\n"
-            "➜ ⏱️ *Auto File Delete*\n\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "⚡ *Fast • Simple • Secure*\n\n"
-            "        © *CL File Bot*"
-        )
+    about_text = (
+        "╭━━━━━━━━━━━━━━━━━━╮\n"
+        "      ✦ *CL FILE BOT* ✦\n"
+        "╰━━━━━━━━━━━━━━━━━━╯\n\n"
+        "➜ 👤 *Owner:* Heisenberg 😈\n"
+        "➜ 🛠️ *Maintained By:* `CL Team`\n"
+        "➜ 🐍 *Language:* `Python 3`\n"
+        "➜ 📚 *Library:* `python-telegram-bot`\n"
+        "➜ 🗄️ *Database:* `MongoDB`\n"
+        "➜ ☁️ *Server:* `Koyeb`\n"
+        "➜ 🔖 *Version:* `v1.1.0`\n"
+        "➜ 🟢 *Status:* `Online`\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "➜ 📂 *Multiple File Sharing*\n"
+        "➜ 🔗 *One Link For Multiple Files*\n"
+        "➜ 🔍 *File List / Auto Filter*\n"
+        "➜ 📦 *Send All Files*\n"
+        "➜ 🔒 *Force Subscribe*\n"
+        "➜ ⏱️ *Auto File Delete*\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "⚡ *Fast • Simple • Secure*\n\n"
+        "        © *CL File Bot*"
+    )
 
-        await query.edit_message_caption(
-            about_text,
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(
+    await query.edit_message_caption(
+        caption=about_text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(
+            [
                 [
-                    [
-                        InlineKeyboardButton(
-                            "🏠 Back To Home",
-                            callback_data="home",
-                        )
-                    ]
+                    InlineKeyboardButton(
+                        "🏠 Back to Home",
+                        callback_data="home",
+                    )
                 ]
-            ),
-        )
-
-        return
-
-    # =====================================================
-    # CLOSE
-    # =====================================================
-
-    elif query.data == "home":
-
-        await query.edit_message_caption(
-        caption=(
-            "👋 *Welcome to CL File Bot!*\n\n"
-            "⚡ Fast & Secure\n"
-            "📥 Easy File Sharing\n\n"
-            "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
+            ]
         ),
+    )
+
+    return
+
+
+# =====================================================
+# HOME
+# =====================================================
+
+elif query.data == "home":
+
+    home_text = (
+        "👋 *Welcome to CL File Bot!*\n\n"
+        "⚡ Fast & Secure\n"
+        "📥 Easy File Sharing\n\n"
+        "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
+    )
+
+    await query.edit_message_caption(
+        caption=home_text,
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(
             [
@@ -639,13 +642,15 @@ async def button_callback(
     )
 
     return
-    # =====================================================
-    # FORCE SUBSCRIBE CHECK
-    # =====================================================
 
-    elif query.data.startswith(
-        "check_subscription:"
-    ):
+
+# =====================================================
+# FORCE SUBSCRIBE CHECK
+# =====================================================
+
+elif query.data.startswith("check_subscription:")
+   
+):
 
         share_token = query.data.split(
             ":",
