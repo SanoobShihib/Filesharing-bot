@@ -583,8 +583,6 @@ async def button_callback(
             "        © *CL File Bot*"
         )
 
-        await query.answer()
-
         await query.edit_message_text(
             about_text,
             parse_mode="Markdown",
