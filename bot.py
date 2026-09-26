@@ -491,14 +491,16 @@ async def start(
     ],
 ]
 
-    await update.message.reply_text(
-    "👋 Welcome to CL File Bot!\n\n"
-    "⚡ Fast & Secure\n"
-    "📥 Easy File Sharing\n\n"
-    "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക.",
+    await update.message.reply_photo(
+    photo="https://radare.arzfun.com/api/tg/photo?id=AgACAgUAAxkBAAENPs5qt4WcROc5Mu_lzlg7N5EvS16UMwACxxFrG9YyuFUcvoj3MsxeoQEAAwIAA3kAAz0E",
+    caption=(
+        "👋 Welcome to CL File Bot!\n\n"
+        "⚡ Fast & Secure\n"
+        "📥 Easy File Sharing\n\n"
+        "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
+    ),
     reply_markup=InlineKeyboardMarkup(keyboard),
 )
-
 
 # =========================================================
 # HELP COMMAND
