@@ -992,27 +992,58 @@ if query.data.startswith("upload_lang:"):
         share_token = parts[1]
         page = int(parts[2])
 
-        files = get_files(
+        from auto_filter.filter import (
+            filter_files,
+            create_file_keyboard,
+            create_file_list_text,
+        )
+
+        filters = context.user_data.setdefault(
+            "file_filters",
+            {}
+        )
+
+        state = filters.setdefault(
+            share_token,
+            {
+                "language": "all",
+                "quality": "all",
+                "page": 0,
+            },
+        )
+
+        state["page"] = page
+
+        all_files = get_files(
             share_token
         )
 
-        if not files:
+        filtered = filter_files(
+            all_files,
+            language=state["language"],
+            quality=state["quality"],
+        )
 
+        if not filtered:
             await query.edit_message_text(
-                "❌ Files not found."
+                "❌ *Files not found*",
+                parse_mode="Markdown",
             )
-
             return
 
         text = create_file_list_text(
-            total_files=len(files),
+            total_files=len(filtered),
             page=page,
+            language=state["language"],
+            quality=state["quality"],
         )
 
         keyboard = create_file_keyboard(
             share_token=share_token,
-            files=files,
+            files=filtered,
             page=page,
+            language=state["language"],
+            quality=state["quality"],
         )
 
         await query.edit_message_text(
