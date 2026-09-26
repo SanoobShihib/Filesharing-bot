@@ -470,7 +470,7 @@ async def start(
 
     user = update.effective_user
 
-        keyboard = [
+    keyboard = [
         [
             InlineKeyboardButton(
                 "👥 Join Our Group",
