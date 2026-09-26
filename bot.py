@@ -491,11 +491,17 @@ async def start(
     ],
 ]
 
-    await update.message.reply_text(
-    "👋 Welcome to CL File Bot!\n\n"
-    "⚡ Fast & Secure\n"
-    "📥 Easy File Sharing\n\n"
-    "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക.",
+welcome_text = (
+    f"*Hey {user.first_name} ♥️*\n\n"
+    "*ഞാൻ ഒരു ഗ്രൂപ്പ് മാനേജർ ബോട്ട് ആണ്, "
+    "ചിത്രലോകം ഗ്രൂപ്പിന് വേണ്ടി മാത്രമാണ് എന്നെ നിർമിച്ചിരിക്കുന്നത്.*\n\n"
+    "*വെറുതെ അവിടേം ഇവിടേം ഞെക്കി സമയം കളയണ്ട ..*\n\n"
+    "*എന്നെ ചിത്രലോകം ഗ്രൂപ്പിൽ മാത്രമേ ഉപയോഗിക്കാൻ കഴിയൂ.*"
+)
+
+await update.message.reply_text(
+    welcome_text,
+    parse_mode="Markdown",
     reply_markup=InlineKeyboardMarkup(keyboard),
 )
 
