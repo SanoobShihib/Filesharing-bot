@@ -600,47 +600,47 @@ async def button_callback(
 
     return
     
-# =====================================================
-# HOME
-# =====================================================
+    # =====================================================
+    # HOME
+    # =====================================================
 
-if query.data == "home":
+    elif query.data == "home":
 
-    home_text = (
-        "👋 *Welcome to CL File Bot!*\n\n"
-        "⚡ Fast & Secure\n"
-        "📥 Easy File Sharing\n\n"
-        "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
-    )
+        home_text = (
+            "👋 *Welcome to CL File Bot!*\n\n"
+            "⚡ Fast & Secure\n"
+            "📤 Easy File Sharing\n\n"
+            "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
+        )
 
-    await query.edit_message_caption(
-        caption=home_text,
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(
-            [
+        await query.edit_message_caption(
+            caption=home_text,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(
                 [
-                    InlineKeyboardButton(
-                        "👥 Join Our Group",
-                        url="https://t.me/+Ik14BdOewjQzYjI1",
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "📢 Join Update Channel",
-                        url="https://t.me/Clmainchannel",
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "ℹ️ About",
-                        callback_data="about",
-                    )
-                ],
-            ]
-        ),
-    )
+                    [
+                        InlineKeyboardButton(
+                            "👥 Join Our Group",
+                            url="https://t.me/+Ik14BdOewjQzYjI1",
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "📢 Join Update Channel",
+                            url="https://t.me/Clmainchannel",
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "ℹ️ About",
+                            callback_data="about",
+                        )
+                    ],
+                ]
+            ),
+        )
 
-    return
+        return
 
 
 # =====================================================
