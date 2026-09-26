@@ -491,16 +491,14 @@ async def start(
     ],
 ]
 
-    await update.message.reply_photo(
-    photo="https://radare.arzfun.com/api/tg/photo?id=AgACAgUAAxkBAAENPs5qt4WcROc5Mu_lzlg7N5EvS16UMwACxxFrG9YyuFUcvoj3MsxeoQEAAwIAA3kAAz0E",
-    caption=(
-        "👋 Welcome to CL File Bot!\n\n"
-        "⚡ Fast & Secure\n"
-        "📥 Easy File Sharing\n\n"
-        "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
-    ),
+    await update.message.reply_text(
+    "👋 Welcome to CL File Bot!\n\n"
+    "⚡ Fast & Secure\n"
+    "📥 Easy File Sharing\n\n"
+    "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക.",
     reply_markup=InlineKeyboardMarkup(keyboard),
 )
+
 
 # =========================================================
 # HELP COMMAND
@@ -514,17 +512,14 @@ async def help_command(
     if not update.message:
         return
 
-    await update.message.reply_photo(
-    photo="https://radare.arzfun.com/api/tg/photo?id=AgACAgUAAxkBAAENPs5qt4WcROc5Mu_lzlg7N5EvS16UMwACxxFrG9YyuFUcvoj3MsxeoQEAAwIAA3kAAz0E",
-    caption=(
-        "👋 *Welcome to CL File Bot!*\n\n"
-        "🚀 *Fast & Secure*\n"
-        "📤 *Easy File Sharing*\n\n"
-        "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
-    ),
-    parse_mode="Markdown",
-    reply_markup=InlineKeyboardMarkup(keyboard),
-)
+    await update.message.reply_text(
+        "ℹ️ Available Commands:\n\n"
+        "/start - Start the bot\n"
+        "/help - Show help\n"
+        "/done - Create one Share Link\n"
+        "/stats - Show database statistics\n\n"
+        "📤 Send multiple documents one by one."
+    )
 
 
 # =========================================================
@@ -553,116 +548,89 @@ async def button_callback(
             "🔗 You will receive one share link."
         )
 
-# =====================================================
-# ABOUT
-# =====================================================
+    # =====================================================
+    # ABOUT
+    # =====================================================
 
     elif query.data == "about":
 
         about_text = (
-        "╭━━━━━━━━━━━━━━━━━━╮\n"
-        "      ✦ *CL FILE BOT* ✦\n"
-        "╰━━━━━━━━━━━━━━━━━━╯\n\n"
-        "➜ 👤 *Owner:* Heisenberg 😈\n"
-        "➜ 🛠️ *Maintained By:* `CL Team`\n"
-        "➜ 🐍 *Language:* `Python 3`\n"
-        "➜ 📚 *Library:* `python-telegram-bot`\n"
-        "➜ 🗄️ *Database:* `MongoDB`\n"
-        "➜ ☁️ *Server:* `Koyeb`\n"
-        "➜ 🔖 *Version:* `v1.1.0`\n"
-        "➜ 🟢 *Status:* `Online`\n\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        "➜ 📂 *Multiple File Sharing*\n"
-        "➜ 🔗 *One Link For Multiple Files*\n"
-        "➜ 🔍 *File List / Auto Filter*\n"
-        "➜ 📦 *Send All Files*\n"
-        "➜ 🔒 *Force Subscribe*\n"
-        "➜ ⏱️ *Auto File Delete*\n\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        "⚡ *Fast • Simple • Secure*\n\n"
-        "        © *CL File Bot*"
-    )
-
-    await query.edit_message_caption(
-        caption=about_text,
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "🏠 Back to Home",
-                        callback_data="home",
-                    )
-                ]
-            ]
-        ),
-    )
-    
-    # =====================================================
-    # HOME
-    # =====================================================
-
-    elif query.data == "home":
-
-        home_text = (
-            "👋 *Welcome to CL File Bot!*\n\n"
-            "⚡ Fast & Secure\n"
-            "📤 Easy File Sharing\n\n"
-            "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
+            "╭━━━━━━━━━━━━━━━━━━╮\n"
+            "      ✦ *CL FILE BOT* ✦\n"
+            "╰━━━━━━━━━━━━━━━━━━╯\n\n"
+            "➜ 👤 *Owner:* [Heisenberg 😈]"
+            "(https://t.me/heisenbergalready)\n"
+            "➜ 🛠️ *Maintained By:* `CL Team`\n"
+            "➜ 🐍 *Language:* `Python 3`\n"
+            "➜ 📚 *Library:* `python-telegram-bot`\n"
+            "➜ 🗄️ *Database:* `MongoDB`\n"
+            "➜ ☁️ *Server:* `Koyeb`\n"
+            "➜ 🔖 *Version:* `v1.1.0`\n"
+            "➜ 🟢 *Status:* `Online`\n\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "➜ 📂 *Multiple File Sharing*\n"
+            "➜ 🔗 *One Link For Multiple Files*\n"
+            "➜ 🔍 *File List / Auto Filter*\n"
+            "➜ 📦 *Send All Files*\n"
+            "➜ 🔒 *Force Subscribe*\n"
+            "➜ ⏱️ *Auto File Delete*\n\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "⚡ *Fast • Simple • Secure*\n\n"
+            "        © *CL File Bot*"
         )
 
-        await query.edit_message_caption(
-            caption=home_text,
+        await query.edit_message_text(
+            about_text,
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(
                 [
                     [
                         InlineKeyboardButton(
-                            "👥 Join Our Group",
-                            url="https://t.me/+Ik14BdOewjQzYjI1",
+                            "❌ Close",
+                            callback_data="close",
                         )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "📢 Join Update Channel",
-                            url="https://t.me/Clmainchannel",
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "ℹ️ About",
-                            callback_data="about",
-                        )
-                    ],
+                    ]
                 ]
             ),
         )
 
-        return
+    # =====================================================
+    # CLOSE
+    # =====================================================
 
+    elif query.data == "close":
 
-# =====================================================
-# FORCE SUBSCRIBE CHECK
-# =====================================================
+        await query.message.delete()
 
-elif query.data.startswith("check_subscription:"):
+    # =====================================================
+    # FORCE SUBSCRIBE CHECK
+    # =====================================================
 
-    share_token = query.data.split(":", 1)[1]
+    elif query.data.startswith(
+        "check_subscription:"
+    ):
 
-    user = query.from_user
+        share_token = query.data.split(
+            ":",
+            1,
+        )[1]
 
-    subscribed = await is_subscribed(
-        context.bot,
-        user.id,
-    )
+        user = query.from_user
 
-    if not subscribed:
-        await query.answer(
-            "❌ ആദ്യം Channel Join ചെയ്യുക.",
-            show_alert=True,
+        subscribed = await is_subscribed(
+            context.bot,
+            user.id,
         )
-        return
-        
+
+        if not subscribed:
+
+            await query.answer(
+                "❌ ആദ്യം Channel Join ചെയ്യുക.",
+                show_alert=True,
+            )
+
+            return
+
         await query.answer(
             "✅ Subscription verified!"
         )
