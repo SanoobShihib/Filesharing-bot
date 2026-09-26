@@ -563,8 +563,7 @@ async def button_callback(
             "╭━━━━━━━━━━━━━━━━━━╮\n"
             "      ✦ *CL FILE BOT* ✦\n"
             "╰━━━━━━━━━━━━━━━━━━╯\n\n"
-            "➜ 👤 *Owner:* [Heisenberg 😈]"
-            "(https://t.me/heisenbergalready)\n"
+            "➜ 👤 *Owner:* Heisenberg 😈\n"
             "➜ 🛠️ *Maintained By:* `CL Team`\n"
             "➜ 🐍 *Language:* `Python 3`\n"
             "➜ 📚 *Library:* `python-telegram-bot`\n"
@@ -584,6 +583,8 @@ async def button_callback(
             "        © *CL File Bot*"
         )
 
+        await query.answer()
+
         await query.edit_message_text(
             about_text,
             parse_mode="Markdown",
@@ -598,6 +599,8 @@ async def button_callback(
                 ]
             ),
         )
+
+        return
 
     # =====================================================
     # CLOSE
