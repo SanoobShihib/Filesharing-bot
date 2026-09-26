@@ -639,6 +639,10 @@ async def button_callback(
             share_token
         )
 
+        await query.message.reply_text(
+            f"DEBUG: {len(all_files)} files found"
+        )
+
         filtered = filter_files(
             all_files,
             language=state["language"],
