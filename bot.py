@@ -535,6 +535,181 @@ async def button_callback(
 
     await query.answer()
 
+
+# =====================================================
+# ADMIN UPLOAD - LANGUAGE SELECTION
+# =====================================================
+
+if query.data.startswith("upload_lang:"):
+
+    parts = query.data.split(":")
+
+    if len(parts) != 3:
+        return
+
+    file_index = int(parts[1])
+    language_code = parts[2]
+
+    user_id = query.from_user.id
+
+    if user_id != ADMIN_ID:
+        await query.answer(
+            "❌ Only admin can use this.",
+            show_alert=True,
+        )
+        return
+
+    user_files = pending_files.get(
+        user_id,
+        [],
+    )
+
+    if file_index < 0 or file_index >= len(user_files):
+        await query.answer(
+            "❌ Invalid file.",
+            show_alert=True,
+        )
+        return
+
+    language_names = {
+        "ml": "Malayalam",
+        "ta": "Tamil",
+        "en": "English",
+        "hi": "Hindi",
+        "te": "Telugu",
+        "kn": "Kannada",
+        "pa": "Punjabi",
+        "bn": "Bengali",
+        "mr": "Marathi",
+        "bho": "Bhojpuri",
+        "dual": "Dual Audio",
+        "multi": "Multi Audio",
+    }
+
+    language_name = language_names.get(
+        language_code,
+        "Unknown",
+    )
+
+    pending_files[user_id][file_index]["language"] = language_name
+
+    quality_keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "360p",
+                    callback_data=f"upload_quality:{file_index}:360",
+                ),
+                InlineKeyboardButton(
+                    "480p",
+                    callback_data=f"upload_quality:{file_index}:480",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "720p",
+                    callback_data=f"upload_quality:{file_index}:720",
+                ),
+                InlineKeyboardButton(
+                    "1080p",
+                    callback_data=f"upload_quality:{file_index}:1080",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🎞️ 4K",
+                    callback_data=f"upload_quality:{file_index}:2160",
+                ),
+                InlineKeyboardButton(
+                    "🌐 Other",
+                    callback_data=f"upload_quality:{file_index}:other",
+                ),
+            ],
+        ]
+    )
+
+    await query.edit_message_text(
+        f"📁 *File {file_index + 1}*\n\n"
+        f"🌐 Language: *{language_name}*\n\n"
+        "🎚️ *SELECT QUALITY:*",
+        parse_mode="Markdown",
+        reply_markup=quality_keyboard,
+    )
+
+    return
+    
+    # =====================================================
+    # ADMIN UPLOAD - QUALITY SELECTION
+    # =====================================================
+
+    if query.data.startswith("upload_quality:"):
+
+        parts = query.data.split(":")
+
+        if len(parts) != 3:
+            return
+
+        file_index = int(parts[1])
+        quality_code = parts[2]
+
+        user_id = query.from_user.id
+
+        if user_id != ADMIN_ID:
+            await query.answer(
+                "❌ Only admin can use this.",
+                show_alert=True,
+            )
+            return
+
+        user_files = pending_files.get(
+            user_id,
+            [],
+        )
+
+        if file_index < 0 or file_index >= len(user_files):
+            await query.answer(
+                "❌ Invalid file.",
+                show_alert=True,
+            )
+            return
+
+        quality_names = {
+            "360": "360p",
+            "480": "480p",
+            "720": "720p",
+            "1080": "1080p",
+            "2160": "4K",
+            "other": "Other",
+        }
+
+        quality_name = quality_names.get(
+            quality_code,
+            "Other",
+        )
+
+        pending_files[user_id][file_index][
+            "quality"
+        ] = quality_name
+
+        file_name = pending_files[user_id][
+            file_index
+        ].get("file_name", "Unknown File")
+
+        language_name = pending_files[user_id][
+            file_index
+        ].get("language", "Unknown")
+
+        await query.edit_message_text(
+            f"✅ *File {file_index + 1} ready!*\n\n"
+            f"📄 `{file_name}`\n\n"
+            f"🌐 Language: *{language_name}*\n"
+            f"🎚️ Quality: *{quality_name}*\n\n"
+            "📤 Send the next file, or use /done.",
+            parse_mode="Markdown",
+        )
+
+        return
+
     # =====================================================
     # HELP
     # =====================================================
@@ -830,7 +1005,6 @@ async def handle_document(
         return
 
     document = update.message.document
-
     user = update.effective_user
 
     if user.id != ADMIN_ID:
@@ -842,23 +1016,92 @@ async def handle_document(
         return
 
     if user.id not in pending_files:
-
         pending_files[user.id] = []
 
     pending_files[user.id].append(
         {
             "file_id": document.file_id,
             "file_name": document.file_name,
+            "language": None,
+            "quality": None,
         }
     )
 
-    count = len(
+    file_index = len(
         pending_files[user.id]
+    ) - 1
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "🇮🇳 MALAYALAM",
+                    callback_data=f"upload_lang:{file_index}:ml",
+                ),
+                InlineKeyboardButton(
+                    "🇮🇳 TAMIL",
+                    callback_data=f"upload_lang:{file_index}:ta",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🇬🇧 ENGLISH",
+                    callback_data=f"upload_lang:{file_index}:en",
+                ),
+                InlineKeyboardButton(
+                    "🇮🇳 HINDI",
+                    callback_data=f"upload_lang:{file_index}:hi",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🇮🇳 TELUGU",
+                    callback_data=f"upload_lang:{file_index}:te",
+                ),
+                InlineKeyboardButton(
+                    "🇮🇳 KANNADA",
+                    callback_data=f"upload_lang:{file_index}:kn",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🇮🇳 PUNJABI",
+                    callback_data=f"upload_lang:{file_index}:pa",
+                ),
+                InlineKeyboardButton(
+                    "🇮🇳 BENGALI",
+                    callback_data=f"upload_lang:{file_index}:bn",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🇮🇳 MARATHI",
+                    callback_data=f"upload_lang:{file_index}:mr",
+                ),
+                InlineKeyboardButton(
+                    "🇮🇳 BHOJPURI",
+                    callback_data=f"upload_lang:{file_index}:bho",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔊 DUAL AUDIO",
+                    callback_data=f"upload_lang:{file_index}:dual",
+                ),
+                InlineKeyboardButton(
+                    "🎵 MULTI AUDIO",
+                    callback_data=f"upload_lang:{file_index}:multi",
+                ),
+            ],
+        ]
     )
 
     await update.message.reply_text(
-        f"✅ File {count} added!\n\n"
-        "📤 Send more files or use /done."
+        f"📁 *File {file_index + 1}*\n\n"
+        f"`{document.file_name}`\n\n"
+        "🌐 *SELECT YOUR LANGUAGE:*",
+        parse_mode="Markdown",
+        reply_markup=keyboard,
     )
 
 
