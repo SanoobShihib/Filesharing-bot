@@ -1051,7 +1051,7 @@ if query.data.startswith("upload_lang:"):
             parse_mode="Markdown",
             reply_markup=keyboard,
         )
-
+    
     # =====================================================
     # SINGLE FILE
     # =====================================================
@@ -1070,8 +1070,30 @@ if query.data.startswith("upload_lang:"):
         share_token = parts[1]
         file_index = int(parts[2])
 
-        files = get_files(
+        from auto_filter.filter import filter_files
+
+        filters = context.user_data.setdefault(
+            "file_filters",
+            {}
+        )
+
+        state = filters.setdefault(
+            share_token,
+            {
+                "language": "all",
+                "quality": "all",
+                "page": 0,
+            },
+        )
+
+        all_files = get_files(
             share_token
+        )
+
+        files = filter_files(
+            all_files,
+            language=state["language"],
+            quality=state["quality"],
         )
 
         if not files:
@@ -1083,7 +1105,10 @@ if query.data.startswith("upload_lang:"):
 
             return
 
-        if file_index < 0 or file_index >= len(files):
+        if (
+            file_index < 0
+            or file_index >= len(files)
+        ):
 
             await query.answer(
                 "❌ Invalid file.",
@@ -1116,7 +1141,7 @@ if query.data.startswith("upload_lang:"):
             await query.message.reply_text(
                 "❌ Failed to send file."
             )
-
+    
     # =====================================================
     # SEND ALL FILES
     # =====================================================
@@ -1130,8 +1155,30 @@ if query.data.startswith("upload_lang:"):
             1,
         )[1]
 
-        files = get_files(
+        from auto_filter.filter import filter_files
+
+        filters = context.user_data.setdefault(
+            "file_filters",
+            {}
+        )
+
+        state = filters.setdefault(
+            share_token,
+            {
+                "language": "all",
+                "quality": "all",
+                "page": 0,
+            },
+        )
+
+        all_files = get_files(
             share_token
+        )
+
+        files = filter_files(
+            all_files,
+            language=state["language"],
+            quality=state["quality"],
         )
 
         if not files:
@@ -1156,7 +1203,7 @@ if query.data.startswith("upload_lang:"):
             bot=context.bot,
             chat_id=query.message.chat_id,
             files=files,
-    )
+        )
         
 # =========================================================
 # HANDLE DOCUMENTS
