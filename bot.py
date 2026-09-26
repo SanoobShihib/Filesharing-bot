@@ -590,8 +590,8 @@ async def button_callback(
                 [
                     [
                         InlineKeyboardButton(
-                            "❌ Close",
-                            callback_data="close",
+                            "🏠 Back To Home",
+                            callback_data="Home",
                         )
                     ]
                 ]
@@ -604,10 +604,41 @@ async def button_callback(
     # CLOSE
     # =====================================================
 
-    elif query.data == "close":
+    elif query.data == "home":
 
-        await query.message.delete()
+    await query.edit_message_caption(
+        caption=(
+            "👋 *Welcome to CL File Bot!*\n\n"
+            "⚡ Fast & Secure\n"
+            "📥 Easy File Sharing\n\n"
+            "👇 താഴെയുള്ള buttons ഉപയോഗിക്കുക."
+        ),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "👥 Join Our Group",
+                        url="https://t.me/+Ik14BdOewjQzYjI1",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "📢 Join Update Channel",
+                        url="https://t.me/Clmainchannel",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "ℹ️ About",
+                        callback_data="about",
+                    )
+                ],
+            ]
+        ),
+    )
 
+    return
     # =====================================================
     # FORCE SUBSCRIBE CHECK
     # =====================================================
