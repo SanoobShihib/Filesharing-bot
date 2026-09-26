@@ -602,6 +602,7 @@ elif query.data == "about":
 
 
 # =====================================================
+# =====================================================
 # HOME
 # =====================================================
 
@@ -648,31 +649,24 @@ elif query.data == "home":
 # FORCE SUBSCRIBE CHECK
 # =====================================================
 
-elif query.data.startswith("check_subscription:")
-   
-):
+elif query.data.startswith("check_subscription:"):
 
-        share_token = query.data.split(
-            ":",
-            1,
-        )[1]
+    share_token = query.data.split(":", 1)[1]
 
-        user = query.from_user
+    user = query.from_user
 
-        subscribed = await is_subscribed(
-            context.bot,
-            user.id,
+    subscribed = await is_subscribed(
+        context.bot,
+        user.id,
+    )
+
+    if not subscribed:
+        await query.answer(
+            "❌ ആദ്യം Channel Join ചെയ്യുക.",
+            show_alert=True,
         )
-
-        if not subscribed:
-
-            await query.answer(
-                "❌ ആദ്യം Channel Join ചെയ്യുക.",
-                show_alert=True,
-            )
-
-            return
-
+        return
+        
         await query.answer(
             "✅ Subscription verified!"
         )
