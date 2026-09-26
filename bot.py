@@ -545,6 +545,131 @@ async def button_callback(
 
     await query.answer()
 
+# =====================================================
+# FILE FILTER MENUS
+# =====================================================
+
+    from auto_filter.filter import (
+        filter_files,
+        create_language_keyboard,
+        create_quality_keyboard,
+    )
+
+    if query.data.startswith("langmenu:"):
+
+        share_token = query.data.split(":", 1)[1]
+
+        await query.edit_message_text(
+            "🌐 *SELECT LANGUAGE:*",
+            parse_mode="Markdown",
+            reply_markup=create_language_keyboard(
+                share_token
+            ),
+        )
+
+        return
+
+    if query.data.startswith("qualmenu:"):
+
+        share_token = query.data.split(":", 1)[1]
+
+        await query.edit_message_text(
+            "🎚️ *SELECT QUALITY:*",
+            parse_mode="Markdown",
+            reply_markup=create_quality_keyboard(
+                share_token
+            ),
+        )
+
+        return
+
+    # =====================================================
+    # FILE FILTER SELECTION
+    # =====================================================
+
+    if (
+        query.data.startswith("setlang:")
+        or query.data.startswith("setqual:")
+        or query.data.startswith("back:")
+    ):
+
+        from auto_filter.filter import (
+            filter_files,
+            create_file_keyboard,
+            create_file_list_text,
+        )
+
+        parts = query.data.split(":")
+
+        share_token = parts[1]
+
+        filters = context.user_data.setdefault(
+            "file_filters",
+            {}
+        )
+
+        state = filters.setdefault(
+            share_token,
+            {
+                "language": "all",
+                "quality": "all",
+                "page": 0,
+            },
+        )
+
+        if query.data.startswith("setlang:"):
+
+            language_code = parts[2]
+
+            state["language"] = language_code
+            state["page"] = 0
+
+        elif query.data.startswith("setqual:"):
+
+            quality_code = parts[2]
+
+            state["quality"] = quality_code
+            state["page"] = 0
+
+        elif query.data.startswith("back:"):
+
+            pass
+
+        all_files = get_files(
+            share_token
+        )
+
+        filtered = filter_files(
+            all_files,
+            language=state["language"],
+            quality=state["quality"],
+        )
+
+        page = state["page"]
+
+        text = create_file_list_text(
+            total_files=len(filtered),
+            page=page,
+            language=state["language"],
+            quality=state["quality"],
+        )
+
+        keyboard = create_file_keyboard(
+            share_token,
+            filtered,
+            page=page,
+            language=state["language"],
+            quality=state["quality"],
+        )
+
+        await query.edit_message_text(
+            text,
+            parse_mode="Markdown",
+            reply_markup=keyboard,
+        )
+
+        return
+
 
 # =====================================================
 # ADMIN UPLOAD - LANGUAGE SELECTION
