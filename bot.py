@@ -583,7 +583,7 @@ async def button_callback(
             "        © *CL File Bot*"
         )
 
-        await query.edit_message_text(
+        await query.edit_message_caption(
             about_text,
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(
@@ -591,7 +591,7 @@ async def button_callback(
                     [
                         InlineKeyboardButton(
                             "🏠 Back To Home",
-                            callback_data="Home",
+                            callback_data="home",
                         )
                     ]
                 ]
