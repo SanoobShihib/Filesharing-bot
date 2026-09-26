@@ -232,6 +232,14 @@ def save_file_group(files, owner_id):
                 "share_token": share_token,
                 "file_id": file_data["file_id"],
                 "file_name": file_data["file_name"],
+                "language": file_data.get(
+                    "language",
+                    "Unknown",
+                ),
+                "quality": file_data.get(
+                    "quality",
+                    "Unknown",
+                ),
             }
             for file_data in files
         ]
@@ -255,6 +263,8 @@ def get_files(share_token):
                 "_id": 0,
                 "file_id": 1,
                 "file_name": 1,
+                "language": 1,
+                "quality": 1,
             },
         )
     )
